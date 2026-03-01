@@ -8,6 +8,7 @@ Welcome to the frontend repository for SplitFlow, a collaborative expense-sharin
 - **Framework:** React (Vite)
 - **Language:** TypeScript
 - **Styling:** Tailwind CSS (using the Soft Mint & Teal palette)
+    - **Icons:** Heroicons
 - **Backend-as-a-Service:** Supabase
 - **State Management:** React Context API / Zustand (optional)
 - **Icons:** Lucide React / Phosphor Icons
