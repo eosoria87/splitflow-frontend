@@ -8,14 +8,14 @@ const Logo = () => {
 			<img 
 				src={LogoIcon} 
 				alt="SplitFlow logo" 
-				className='h-6 w-6 dark:hidden' 
+				className='h-8 w-7 dark:hidden ' 
 			/>
 			<img 
 				src={DarkLogoIcon} 
 				alt="SplitFlow logo" 
 				className='hidden h-6 w-6 dark:block' 
 			/>
-			<span className='font-sans text-lg font-bold text-logo-text'> SplitFlow </span>
+			<span className='font-sans font text-xl px-0.5  font-bold text-logo-text '> SplitFlow </span>
     </div>
   );
 };
