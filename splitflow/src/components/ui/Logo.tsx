@@ -15,7 +15,7 @@ const Logo = () => {
 				alt="SplitFlow logo" 
 				className='hidden h-6 w-6 dark:block' 
 			/>
-			<span className='font-sans font text-xl px-0.5  font-bold text-logo-text '> SplitFlow </span>
+			<span className='selection:bg-primary selection:text-white font-sans font text-xl px-0.5  font-bold text-logo-text '> SplitFlow </span>
     </div>
   );
 };
