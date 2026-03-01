@@ -1,0 +1,32 @@
+import type { ButtonHTMLAttributes } from 'react';
+
+interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+	variant?: 'primary' | 'secondary' | 'outline' | 'danger';
+  size?: 'sm' | 'md' | 'lg';
+  className?: string;
+}
+
+const variantClasses = {
+  primary: 'bg-primary text-white hover:bg-primary/90', 
+  secondary: 'bg-secondary text-primary-dark hover:bg-secondary/80', 
+  outline: 'bg-outline text-primary-dark box-border border border-slate-200 hover:bg-slate-100', 
+  danger: 'bg-danger text-danger-text hover:bg-red-100', 
+};
+
+const sizeClasses = {
+  sm: 'px-3 py-1 text-sm',
+  md: 'px-4 py-2 text-sm',
+  lg: 'px-6 py-3 text-base',
+};
+
+const Button = ({variant='primary', size='md', className='', ...props}: ButtonProps) => {
+	const base = 'font-semibold rounded-md transition focus:outline-none focus:ring-2 focus:ring-offset-2';
+	const variantClass = variantClasses[variant];
+	const sizeClass = sizeClasses[size];
+  return (
+    <button className={`${base} ${variantClass} ${sizeClass} ${className}`} {...props} />
+  );
+};
+
+export default Button;
+
