@@ -1,7 +1,7 @@
 import type { ButtonHTMLAttributes } from 'react';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-	variant?: 'primary' | 'secondary' | 'outline' | 'danger';
+	variant?: 'primary' | 'secondary' | 'outline' | 'danger' | 'onlyText';
   size?: 'sm' | 'md' | 'lg';
   className?: string;
 }
@@ -11,6 +11,7 @@ const variantClasses = {
   secondary: 'bg-secondary text-primary hover:bg-secondary/80', 
   outline: 'bg-outline text-primary-dark box-border border border-slate-200 hover:bg-slate-100', 
   danger: 'bg-danger text-danger-text hover:bg-red-100', 
+	onlyText: 'bg-transparent text-accent font-medium hover:text-accent/80',
 };
 
 const sizeClasses = {
