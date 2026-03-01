@@ -1,13 +1,13 @@
 import './App.css'
+import NavBarOnboarding from './components/navigation/NavBarOnboarding'
 
 function App() {
-
   return (
-    <>
-      <div>
-				<h1>Starting SplitFlow</h1>
+    <div> 
+			<NavBarOnboarding />
+      <div className="flex flex-wrap items-center ">
       </div>
-    </>
+    </div>
   )
 }
 
