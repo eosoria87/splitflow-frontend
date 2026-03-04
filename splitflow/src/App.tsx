@@ -1,14 +1,15 @@
+import { Route, Routes } from 'react-router-dom'
 import './App.css'
-import NavBarOnboarding from './components/navigation/NavBarOnboarding'
+import OnboardingPage from './pages/OnboardingPage';
+import LoginPage from './pages/LoginPage';
 
 function App() {
-  return (
-    <div> 
-			<NavBarOnboarding />
-      <div className="flex flex-wrap items-center ">
-      </div>
-    </div>
-  )
+	return (
+			<Routes>
+				<Route path="/" element={<OnboardingPage />} />
+				<Route path="/login" element={<LoginPage />} />
+			</Routes>
+	)
 }
 
 export default App
