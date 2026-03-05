@@ -81,7 +81,7 @@ const LoginPage = () => {
 							<EyeIcon className="size-5" />
 						</button>
 					</div> {/* password input/eye icon div ending*/}
-					<Button variant='primary' className="w-full mt-2 py-3.5" size="lg" type="submit">
+					<Button disabled={Object.keys(errors).length > 0} variant='primary' className="w-full mt-2 py-3.5" size="lg" type="submit">
 						Log In
 					</Button>
 				</form>

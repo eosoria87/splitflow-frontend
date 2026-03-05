@@ -21,7 +21,7 @@ const sizeClasses = {
 };
 
 const Button = ({variant='primary', size='md', className='', ...props}: ButtonProps) => {
-	const base = 'font-semibold rounded-md transition focus:outline-none focus:ring-2 focus:ring-offset-2';
+	const base = 'font-semibold rounded-md transition focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:opacity-50';
 	const variantClass = variantClasses[variant];
 	const sizeClass = sizeClasses[size];
   return (
