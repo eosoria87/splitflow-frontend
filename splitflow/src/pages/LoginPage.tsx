@@ -1,16 +1,25 @@
-import { Link } from "react-router-dom";
-import Logo from "../components/ui/Logo";
 import { useState } from "react";
+import { useForm, type FieldValues } from 'react-hook-form';
+import { Link } from "react-router-dom";
 import { EyeIcon } from "@heroicons/react/24/outline";
+import Logo from "../components/ui/Logo";
 import Button from "../components/ui/Button";
 import FooterBar from "../components/navigation/FooterBar";
 
+interface FormData {
+	email: string;
+	password: string;
+}
 
 const LoginPage = () => {
 	const [showPassword, setShowPassword] = useState<boolean>(false);
 	
+	const { register, handleSubmit, formState: { errors } } = useForm<FormData>();
+
+	const onSubmit = (data: FieldValues) => console.log(data);
+	
 	const handleSignUpGoogle = () => {
-		return;
+		console.log('signed up by Google');
 	}
 
 	return (
@@ -22,16 +31,25 @@ const LoginPage = () => {
 				<h1 className="text-2xl font-bold text-grey-900 mb-2">Welcome back</h1>
 				<p className="text-sm text-accent font-medium">Collaborative expense tracking made simple.</p>
 
-				<form action="" onSubmit={(e) => e.preventDefault()} className="space-y-5 mt-6">
+				<form action="" onSubmit={handleSubmit(onSubmit)} className="space-y-5 mt-6">
 					<div>
 						<label htmlFor="email" className="block text-left text-sm font-medium text-grey-900 mb-2">
 							Email Address
 						</label>
 						<input
-							type="text"
+						{...register('email', { required: true, pattern: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+						})}
+							type="email"
 							placeholder="name@company.com"
+							autoComplete="email"
 							className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors text-sm placeholder:text-slate-400"
 						/>
+						{errors.email?.type === 'required' && (
+							<p className="text-red-500 text-sm mt-1">The email field is required.</p>
+						)}
+						{errors.email?.type === 'pattern' && (
+							<p className="text-red-500 text-sm mt-1">Please enter a valid email address.</p>
+						)}
 					</div>
 					<div className="flex justify-between items-center mb-2">
 						<label htmlFor="password" className="block text-sm font-medium text-grey-900 text-left mb-2">
@@ -43,10 +61,18 @@ const LoginPage = () => {
 					</div>
 					<div className="relative">
 						<input
+							{...register('password', {required: true, minLength: 8})}
 							type={showPassword ? "text" : "password"}
+							autoComplete="current-password"
 							placeholder="••••••••"
 							className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors text-sm placeholder:text-slate-400 tracking-widest"
 						/>
+						{errors.password?.type === 'required' && (
+							<p className="text-red-500 text-sm mt-1">The password field is required.</p>
+						)}
+						{errors.password?.type === 'minLength' && (
+							<p className="text-red-500 text-sm mt-1">The password must be at least 8 characters long.</p>
+						)}
 						<button
 							type="button"
 							onClick={() => setShowPassword(!showPassword)}
