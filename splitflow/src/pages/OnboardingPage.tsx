@@ -20,7 +20,7 @@ const OnboardingPage = () => {
 			navigate('/login');
 	};
 	return (
-		<div className="h-[calc(100vh-80px)] flex flex-col w-full">
+		<div className="h-[calc(100vh-4rem)] flex flex-col w-full">
 			<NavBarOnboarding onClick={() => navigate('/login')} />
 			<div className="flex-1 sm:w-full flex flex-col items-center p-6">
 				<div className="rounded-4xl flex-1 flex items-center justify-center w-full overflow-hidden">
