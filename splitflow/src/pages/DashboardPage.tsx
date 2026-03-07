@@ -4,6 +4,7 @@ import RecentActivityCard from "../components/dashboard/RecentActivityCard";
 import Button from "../components/ui/Button"; // Assuming you have your Button component here
 import { BellIcon, PlusIcon } from "@heroicons/react/24/outline";
 import Sidebar from "../components/navigation/Sidebar";
+import MobileMenu from "../components/navigation/MobileMenu";
 
 const DashboardPage = () => {
 	return (
@@ -15,10 +16,12 @@ const DashboardPage = () => {
 
 				{/* --- TOP HEADER --- */}
 				<header className="xl:pl-64 sm:px-4 sm:px-8 pb-8 flex flex-row items-center justify-between gap-4">
-
-					<div>
-						<h1 className="text-2xl font-bold mt-1 text-left text-slate-900">Dashboard</h1>
-						<p className="text-sm text-slate-500 hidden sm:block">Welcome back, let's settle up!</p>
+					<div className="flex items-center gap-3">
+						<MobileMenu />
+						<div>
+							<h1 className="text-2xl font-bold mt-1 text-left text-slate-900">Dashboard</h1>
+							<p className="text-sm  text-slate-500 hidden sm:block">Welcome back, let's settle up!</p>
+						</div>
 					</div>
 
 					<div className="flex items-center gap-3">
