@@ -22,8 +22,8 @@ const Sidebar = () => {
 						to={item.path}
 						className={({ isActive }) =>
 							`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-colors ${isActive
-								? "bg-teal-50 text-teal-600" // The Active State (Mint Green)
-								: "text-slate-500 hover:text-slate-900 hover:bg-slate-100" // The Inactive State
+								? "bg-teal-50 text-teal-600" 
+								: "text-slate-500 hover:text-slate-900 hover:bg-slate-100" 
 							}`
 						}
 					>
@@ -34,7 +34,6 @@ const Sidebar = () => {
 				))}
 			</nav>
 
-			{/* 3. Bottom Section: Settings & Profile */}
 			<div className="p-4 border-t border-slate-200 flex flex-col gap-2">
 
 				{/* Settings Link */}
