@@ -5,12 +5,17 @@ import Button from "../components/ui/Button"; // Assuming you have your Button c
 import { BellIcon, PlusIcon } from "@heroicons/react/24/outline";
 import Sidebar from "../components/navigation/Sidebar";
 import MobileMenu from "../components/navigation/MobileMenu";
+import AddExpenseModal from "../components/ui/AddExpenseModal";
+import { useState } from "react";
 
 const DashboardPage = () => {
+	const [isModalOpen, setIsModalOpen] = useState(false);
+
 	return (
 		<div className="min-h-screen flex">
 
 			<Sidebar />
+			<AddExpenseModal isOpen={isModalOpen} onClose={() => {setIsModalOpen(false)}} />
 
 			<main className="flex-1  flex  flex-col min-h-screen">
 
@@ -29,7 +34,7 @@ const DashboardPage = () => {
 							<BellIcon className="w-5 h-5" />
 						</button>
 
-						<Button variant="primary" className="py-2.5 px-4 sm:px-6 flex items-center gap-2 shrink-0">
+						<Button variant="primary" onClick={() => setIsModalOpen(true)} className="py-2.5 px-4 sm:px-6 flex items-center gap-2 shrink-0">
 							<PlusIcon className="w-4 h-4" />
 							<span className="hidden sm:inline">Add Expense</span>
 						</Button>
