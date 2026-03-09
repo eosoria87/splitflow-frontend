@@ -5,6 +5,9 @@ import LoginPage from './pages/LoginPage';
 import SignUpPage from './pages/SignUpPage';
 import DashboardPage from './pages/DashboardPage';
 import AuditPage from './pages/AuditPage';
+import BalancePage from './pages/BalancePage';
+import GroupPage from './pages/GroupPage';
+import CreateGroupPage from './pages/CreateGroupPage';
 
 function App() {
 	return (
@@ -14,6 +17,9 @@ function App() {
 				<Route path="/signup" element={<SignUpPage />} />
 				<Route path="/dashboard" element={<DashboardPage />} />
 				<Route path="/audit" element={<AuditPage />} />
+				<Route path="/balance" element={<BalancePage />} />
+				<Route path="/group" element={<GroupPage />} />
+				<Route path="/create-group" element={<CreateGroupPage />} />
 			</Routes>
 	)
 }
