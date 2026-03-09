@@ -34,8 +34,8 @@ const ActivityItem = ({ avatar, personName, action, target, time, statusText, st
 
         {/* Text Stack */}
         <div className="flex flex-col">
-          <p className="text-sm text-slate-600">
-            <span className="font-bold text-slate-900">{personName}</span> {action} <span className="font-bold text-slate-900">"{target}"</span>
+          <p className="sm:text-left text-sm text-slate-600">
+            <span className="font-boldtext-slate-900">{personName}</span> {action} <span className="font-bold text-slate-900">"{target}"</span>
           </p>
           <p className={`sm:text-left text-xs font-medium mt-0.5 ${colorMap[statusColor]}`}>
             {statusText}
