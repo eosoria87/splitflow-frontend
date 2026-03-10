@@ -15,7 +15,7 @@ const DashboardPage = () => {
 
 			<main className="flex-1  flex  flex-col min-h-screen">
 				{/* --- HEADER --- */}
-				<Header 
+			<Header 
 					title='Dashboard' 
 					subtitle="Welcome back, let's settle up!" 
 				/>
