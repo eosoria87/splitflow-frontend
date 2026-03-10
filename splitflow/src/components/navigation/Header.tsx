@@ -5,34 +5,43 @@ import Button from '../ui/Button';
 import AddExpenseModal from '../ui/AddExpenseModal';
 
 interface Props extends React.PropsWithChildren {
-	title?: string;
+	title: string;
 	subtitle?: string;
 	icon?: React.ReactNode;
 }
 
-const Header = ({ title, subtitle, icon, children }: Props) => {
+const Header = ({ title, subtitle, icon }: Props) => {
 	const [isModalOpen, setIsModalOpen] = useState(false);
+	const miniTitle = title.length > 3 ? `${title.substring(0, 3)}...` : title;
 	return (
 		<div >
 			<AddExpenseModal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false) }} />
 			{/* --- TOP HEADER --- */}
-			<header className="xl:pl-64 sm:px-8 pb-8 flex flex-row items-center justify-between gap-4">
-				<div className="flex items-center gap-3">
+			<header className="xl:pl-64 sm:px-8 pb-8 flex flex-row items-center justify-between gap-2">
+				<div className="flex items-center gap-3 min-w-0">
 					<MobileMenu />
 					{icon &&
-						<div className='text-primary size-15 bg-secondary rounded-2xl p-4 hidden xl:block'>
+						<div className='text-primary size-15 bg-secondary rounded-2xl p-4 hidden xl:block shrink-0'>
 							{icon}
 					</div>
 					}
-					<div>
-						<h1 className="text-2xl font-bold mt-1 text-left text-slate-900">{title}</h1>
-						<p className=" text-left text-sm  text-slate-500 hidden sm:block">{subtitle}</p>
-						{children}
+					<div className='min-w-0'>
+						<h1 className="text-xl sm:text-2xl font-bold mt-1 text-left text-slate-900">
+
+							<span className="max-[374px]:hidden block truncate">
+								{title}
+							</span>
+							<span className="hidden max-[374px]:block">
+								{miniTitle}
+							</span>
+
+						</h1>
+						<p className="truncate text-left text-sm  text-primary hidden sm:block">{subtitle}</p>
 					</div>
 				</div>
 
 				<div className="flex items-center gap-3">
-					<button className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-700 hover:bg-slate-50 transition-colors shadow-sm shrink-0">
+					<button className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-primary hover:text-slate-700 hover:bg-slate-50 transition-colors shadow-sm shrink-0">
 						<BellIcon className="w-5 h-5" />
 					</button>
 
