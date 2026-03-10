@@ -8,11 +8,12 @@ interface Props extends React.PropsWithChildren {
 	title: string;
 	subtitle?: string;
 	icon?: React.ReactNode;
+	customAction?: React.ReactNode;
 }
 
-const Header = ({ title, subtitle, icon }: Props) => {
+const Header = ({ title, subtitle, icon, customAction }: Props) => {
 	const [isModalOpen, setIsModalOpen] = useState(false);
-	const miniTitle = title.length > 3 ? `${title.substring(0, 3)}...` : title;
+	const miniTitle = title.length > 6 ? `${title.substring(0, 3)}...` : title;
 	return (
 		<div >
 			<AddExpenseModal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false) }} />
@@ -21,7 +22,7 @@ const Header = ({ title, subtitle, icon }: Props) => {
 				<div className="flex items-center gap-3 min-w-0">
 					<MobileMenu />
 					{icon &&
-						<div className='text-primary size-15 bg-secondary rounded-2xl p-4 hidden xl:block shrink-0'>
+						<div className='text-primary size-15 bg-white border border-slate-200 rounded-2xl p-4 hidden xl:block shrink-0'>
 							{icon}
 					</div>
 					}
@@ -45,10 +46,14 @@ const Header = ({ title, subtitle, icon }: Props) => {
 						<BellIcon className="w-5 h-5" />
 					</button>
 
-					<Button variant="primary" onClick={() => setIsModalOpen(true)} className="py-2.5 px-4 sm:px-6 flex items-center gap-2 shrink-0">
-						<PlusIcon className="w-4 h-4" />
-						<span className="hidden sm:inline">Add Expense</span>
-					</Button>
+					{customAction ? (
+						customAction
+					) : (
+						<Button variant="primary" onClick={() => setIsModalOpen(true)} className="py-2.5 px-4 sm:px-6 flex items-center gap-2 shrink-0">
+						    <PlusIcon className="w-4 h-4" />
+						    <span className="hidden sm:inline">Add Expense</span>
+						</Button>
+					)}
 				</div>
 
 			</header>
