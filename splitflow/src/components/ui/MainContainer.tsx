@@ -12,7 +12,7 @@ const colMap: Record<number, string> = {
 
 const MainContainer = ({ columnsNum=2, children }: Props) => {
   return (
-		<div className={`xl:pl-64 sm:px-8 pb-12 grid grid-cols-1 ${colMap[columnsNum]} gap-8 items-start`}>
+		<div className={`xl:pl-64 sm:px-8 grid grid-cols-1 ${colMap[columnsNum]} gap-8 items-start`}>
     	{ children } 
     </div>
   );
