@@ -8,9 +8,11 @@ import AuditLogPage from './pages/AuditLogPage';
 import BalancePage from './pages/BalancePage';
 import GroupPage from './pages/GroupPage';
 import CreateGroupPage from './pages/CreateGroupPage';
+import { ToastContainer } from 'react-toastify';
 
 function App() {
 	return (
+		<>
 			<Routes>
 				<Route path="/" element={<OnboardingPage />} />
 				<Route path="/login" element={<LoginPage />} />
@@ -21,6 +23,9 @@ function App() {
 				<Route path="/group" element={<GroupPage />} />
 				<Route path="/create-group" element={<CreateGroupPage />} />
 			</Routes>
+			<ToastContainer />
+		</>
+
 	)
 }
 
