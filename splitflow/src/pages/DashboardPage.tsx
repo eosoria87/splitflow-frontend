@@ -4,8 +4,9 @@ import TotalBalanceCard from "../components/dashboard/TotalBalanceCard";
 import GroupGrid from "../components/dashboard/GroupGrid";
 import RecentActivityCard from "../components/dashboard/RecentActivityCard";
 import MainContainer from "../components/ui/MainContainer";
+import { mockGroups } from '../data/mockGroupCards';
 
-const DashboardPage = () => {
+const DashboardPage = ( ) => {
 
 	return (
 		<div className="min-h-screen flex">
@@ -30,7 +31,7 @@ const DashboardPage = () => {
 				<MainContainer columnsNum={3}>
 				{/* --- Groups Grid --- */}
 					<div className="xl:col-span-2 flex flex-col gap-4">
-						<GroupGrid />
+						<GroupGrid groups={mockGroups} />
 					</div>
 				{/* --- Activity List --- */}
 					<div className="xl:col-span-1">
