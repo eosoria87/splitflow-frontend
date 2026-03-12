@@ -1,5 +1,5 @@
 import CreateGroupCard from './CreateGroupCard';
-import GroupCard, { type GroupCardType } from './GroupCard';
+import GroupCard  from './GroupCard';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { 
@@ -9,24 +9,32 @@ import {
     UsersIcon, 
     TagIcon 
 } from '@heroicons/react/24/solid';
-
+import type { DashboardGroup } from '../../services/dashboardService';
 
 interface Props {
-	groups: GroupCardType[];
+	groups: DashboardGroup[];
 }
 
-const getCategoryIcon = (category?: string) => {
-    const className = "w-5 h-5"; // Standardizing the size
-    
-    switch (category?.toLowerCase()) {
-        case 'trip': return <PaperAirplaneIcon className={className} />;
-        case 'travel': return <PaperAirplaneIcon className={className} />;
+const getCategoryStyles = (category: string) => {
+    switch (category.toLowerCase()) {
+        case 'trip': case 'travel': return 'bg-blue-50 text-blue-500';
+        case 'home': return 'bg-indigo-50 text-indigo-500';
+        case 'couple': return 'bg-pink-50 text-pink-500';
+        case 'friends': return 'bg-yellow-50 text-yellow-500';
+        case 'other': 
+        default: return 'bg-slate-100 text-slate-500'; 
+    }
+};
+
+const getCategoryIcon = (category: string) => {
+    const className = "w-5 h-5";
+    switch (category.toLowerCase()) {
+        case 'trip': case 'travel': return <PaperAirplaneIcon className={className} />;
         case 'home': return <HomeIcon className={className} />;
         case 'couple': return <HeartIcon className={className} />;
         case 'friends': return <UsersIcon className={className} />;
         case 'other':
-        default: 
-            return <TagIcon className={className} />;
+        default: return <TagIcon className={className} />;
     }
 };
 
@@ -49,12 +57,12 @@ const GroupGrid = ( { groups } : Props  ) => {
 
 				{groups.map((group) => (
 					<GroupCard
-						key={group.key}
-						name={group.name}
-						updated_at={group.updated_at}
-						iconBgClass={group.iconBgClass}
+						key={group.id}
+						title={group.name}
+						lastActivity={group.updatedAt}
 						status={group.status}
 						amount={group.amount || undefined}
+						iconBgClass={getCategoryStyles(group.category)}
 						icon={getCategoryIcon(group.category)}
 					/>
 				))}

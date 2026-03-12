@@ -4,21 +4,21 @@ import { TagIcon } from "@heroicons/react/24/outline";
 import Button from "../ui/Button";
 import type { ReactNode } from "react";
 
-export interface GroupCardType {
+interface GroupCardType {
 	icon?: ReactNode;
 	iconBgClass?: string;
 	status: 'owed' | 'owe' | 'settled';
   amount?: string | null;
 
-	name: string;
+	title: string;
 	key: string;
-	updated_at?: string;
+	lastActivity?: string;
 	category?: string;
 
 }
 
 
-const GroupCard = ({name, updated_at, icon, iconBgClass, status, amount }: GroupCardType) => {
+const GroupCard = ({title, lastActivity, icon, iconBgClass, status, amount }: GroupCardType) => {
 
 	const getBadgeStyle = () => {
 		switch (status) {
@@ -46,8 +46,8 @@ const GroupCard = ({name, updated_at, icon, iconBgClass, status, amount }: Group
 
       {/* Middle Row: Text Content */}
       <div className="mb-6">
-        <h3 className="text-base font-bold sm:text-left text-slate-900">{name}</h3>
-        <p className="text-xs text-slate-500 sm:text-left mt-1">Last activity: {updated_at}</p>
+        <h3 className="text-base font-bold sm:text-left text-slate-900">{title}</h3>
+        <p className="text-xs text-slate-500 sm:text-left mt-1">Last activity: {lastActivity}</p>
       </div>
 
       {/* Bottom Row: Avatars & Arrow */}
