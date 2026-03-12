@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import Sidebar from "../components/navigation/Sidebar";
 import Header from "../components/navigation/Header";
 import TotalBalanceCard from "../components/dashboard/TotalBalanceCard";
@@ -5,8 +6,28 @@ import GroupGrid from "../components/dashboard/GroupGrid";
 import RecentActivityCard from "../components/dashboard/RecentActivityCard";
 import MainContainer from "../components/ui/MainContainer";
 import { mockGroups } from '../data/mockGroupCards';
+import { dashboardService } from "../services/dashboardService";
+import type { GroupCardType } from "../components/dashboard/GroupCard";
+
+
 
 const DashboardPage = ( ) => {
+
+	const [ userGroups, setUserGroups] = useState<GroupCardType[]>([]);
+
+	useEffect(() => {
+		const fetchDashboardData = async () => {
+			const testUserId = "6e1f3369-7bcf-4f4a-8550-8b0220121d04";
+
+			const groupsData = await dashboardService.getUserGroups(testUserId);
+
+			if (groupsData)
+				setUserGroups(groupsData);
+		};
+
+		fetchDashboardData();
+
+	}, []);
 
 	return (
 		<div className="min-h-screen flex">
@@ -31,7 +52,7 @@ const DashboardPage = ( ) => {
 				<MainContainer columnsNum={3}>
 				{/* --- Groups Grid --- */}
 					<div className="xl:col-span-2 flex flex-col gap-4">
-						<GroupGrid groups={mockGroups} />
+						<GroupGrid groups={userGroups}/>
 					</div>
 				{/* --- Activity List --- */}
 					<div className="xl:col-span-1">

@@ -1,9 +1,21 @@
 import { ArrowRightIcon } from "@heroicons/react/16/solid";
 import Card from "../ui/Card";
-import type { GroupCardType } from "../../types/Group";
 import { TagIcon } from "@heroicons/react/24/outline";
 import Button from "../ui/Button";
+import type { ReactNode } from "react";
 
+export interface GroupCardType {
+	icon?: ReactNode;
+	iconBgClass?: string;
+	status: 'owed' | 'owe' | 'settled';
+  amount?: string | null;
+
+	name: string;
+	key: string;
+	updated_at?: string;
+	category?: string;
+
+}
 
 
 const GroupCard = ({name, updated_at, icon, iconBgClass, status, amount }: GroupCardType) => {
