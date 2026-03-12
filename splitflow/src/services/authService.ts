@@ -65,6 +65,22 @@ const authService = {
 
     return data;
   },
+
+  async googleAuth(): Promise<{ url: string }> {
+    const response = await fetch(`${API_URL}/api/auth/google`);
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error ?? 'Google auth failed');
+    return data;
+  },
+
+  async getMe(accessToken: string): Promise<AuthUser> {
+    const response = await fetch(`${API_URL}/api/auth/me`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error ?? 'Failed to get user');
+    return data.user;
+  },
 };
 
 export default authService;

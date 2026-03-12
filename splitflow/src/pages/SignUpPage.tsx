@@ -6,6 +6,7 @@ import Logo from "../components/ui/Logo";
 import Button from "../components/ui/Button";
 import FooterBar from "../components/navigation/FooterBar";
 import { useAuth } from "../hooks/useAuth";
+import authService from "../services/authService";
 
 interface FormData {
 	name: string;
@@ -31,8 +32,15 @@ const SignUpPage = () => {
 		}
 	};
 
-	const handleSignUpGoogle = () => {
-		console.log('signed up by Google');
+	const handleSignUpGoogle = async () => {
+		setApiError(null);
+		try {
+			const { url } = await authService.googleAuth();
+			window.location.href = url;
+		} catch (err: unknown) {
+			const message = err instanceof Error ? err.message : 'Google sign-in failed';
+			setApiError(message);
+		}
 	};
 
 	return (

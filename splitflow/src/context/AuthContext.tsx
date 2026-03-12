@@ -50,13 +50,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const loginWithOAuth = async (accessToken: string, refreshToken: string, expiresAt: number) => {
+    setIsLoading(true);
+    try {
+      const user = await authService.getMe(accessToken);
+      setUser(user);
+      setSession({ access_token: accessToken, refresh_token: refreshToken, expires_at: expiresAt });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const logout = () => {
     setUser(null);
     setSession(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, isLoading, signup, login, logout }}>
+    <AuthContext.Provider value={{ user, session, isLoading, signup, login, loginWithOAuth, logout }}>
       {children}
     </AuthContext.Provider>
   );

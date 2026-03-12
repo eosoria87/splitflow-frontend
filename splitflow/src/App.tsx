@@ -8,6 +8,7 @@ import AuditLogPage from './pages/AuditLogPage';
 import BalancePage from './pages/BalancePage';
 import GroupPage from './pages/GroupPage';
 import CreateGroupPage from './pages/CreateGroupPage';
+import AuthCallbackPage from './pages/AuthCallbackPage';
 import { ToastContainer } from 'react-toastify';
 
 function App() {
@@ -22,6 +23,7 @@ function App() {
 				<Route path="/balance" element={<BalancePage />} />
 				<Route path="/group" element={<GroupPage />} />
 				<Route path="/create-group" element={<CreateGroupPage />} />
+				<Route path="/auth/callback" element={<AuthCallbackPage />} />
 			</Routes>
 			<ToastContainer />
 		</>

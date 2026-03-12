@@ -7,6 +7,7 @@ export interface AuthContextValue {
   isLoading: boolean;
   signup: (payload: SignUpPayload) => Promise<void>;
   login: (payload: LoginPayload) => Promise<void>;
+  loginWithOAuth: (accessToken: string, refreshToken: string, expiresAt: number) => Promise<void>;
   logout: () => void;
 }
 
