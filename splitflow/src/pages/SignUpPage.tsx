@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { useForm, type FieldValues } from 'react-hook-form';
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { EyeIcon, UserIcon } from "@heroicons/react/24/outline";
 import Logo from "../components/ui/Logo";
 import Button from "../components/ui/Button";
 import FooterBar from "../components/navigation/FooterBar";
+import { useAuth } from "../hooks/useAuth";
+import authService from "../services/authService";
 
 interface FormData {
 	name: string;
@@ -12,21 +14,39 @@ interface FormData {
 	password: string;
 }
 
-const LoginPage = () => {
+const SignUpPage = () => {
 	const [showPassword, setShowPassword] = useState<boolean>(false);
+	const [apiError, setApiError] = useState<string | null>(null);
 	const { register, handleSubmit, formState: { errors, isValid } } = useForm<FormData>({ mode: 'onChange' });
+	const { signup, isLoading } = useAuth();
+	const navigate = useNavigate();
 
-	const onSubmit = (data: FieldValues) => console.log(data);
-	
-	const handleSignUpGoogle = () => {
-		console.log('signed up by Google');
-	}
+	const onSubmit = async (data: FieldValues) => {
+		setApiError(null);
+		try {
+			await signup({ name: data.name, email: data.email, password: data.password });
+			navigate('/');
+		} catch (err: unknown) {
+			const message = err instanceof Error ? err.message : 'Something went wrong. Please try again.';
+			setApiError(message);
+		}
+	};
+
+	const handleSignUpGoogle = async () => {
+		setApiError(null);
+		try {
+			const { url } = await authService.googleAuth();
+			window.location.href = url;
+		} catch (err: unknown) {
+			const message = err instanceof Error ? err.message : 'Google sign-in failed';
+			setApiError(message);
+		}
+	};
 
 	return (
 		<div className="h-full w-full flex items-center justify-center overflow-hidden ">
 		<div className="flex flex-col items-center w-full sm:px-4 sm:py-8 sm:w-md h-full overflow-y-auto ">
 			<div className="mb-8 "><Logo /></div>
-
 
 			<div className="bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] w-full p-8 sm:p-10 border border-slate-100">
 				<h1 className="text-2xl font-bold text-grey-900 mb-2">Create your account</h1>
@@ -95,10 +115,12 @@ const LoginPage = () => {
 						>
 							<EyeIcon className="size-5" />
 						</button>
-						 {/*React hook-form*/}
-					</div> {/* password input/eye icon div ending*/}
-					<Button disabled={!isValid} variant='primary' className="w-full mt-2 py-3.5" size="lg" type="submit">
-						Create Account
+					</div>
+					{apiError && (
+						<p className="text-red-500 text-sm">{apiError}</p>
+					)}
+					<Button disabled={!isValid || isLoading} variant='primary' className="w-full mt-2 py-3.5" size="lg" type="submit">
+						{isLoading ? 'Creating account…' : 'Create Account'}
 					</Button>
 				</form>
 				<div className="text-center mt-6 text-sm text-slate-500 font-regular">
@@ -122,12 +144,11 @@ const LoginPage = () => {
 						<span className="text-gray-500">Google</span>
 					</span>
 				</Button>
-			</div> {/* White container div ending*/}
+			</div>
 			<FooterBar />
 		</div>
 		</div>
 	);
 };
 
-export default LoginPage;
-
+export default SignUpPage;
