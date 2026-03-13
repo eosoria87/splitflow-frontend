@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
 	Bars3CenterLeftIcon,
 	UserPlusIcon,
@@ -14,6 +15,16 @@ import { mockMembers } from "../data/mockMembers";
 import type { Member } from "../types/Member";
 import Header from "../components/navigation/Header";
 import Sidebar from "../components/navigation/Sidebar";
+import groupService from "../services/groupService";
+import { useAuth } from "../hooks/useAuth";
+
+// Maps frontend category keys to the values the backend accepts
+const categoryToBackend: Record<TransactionCategory, string> = {
+	transport: 'travel',
+	accommodation: 'home',
+	food: 'other',
+	shopping: 'other',
+};
 
 
 // 2. Map our strict types to the friendly UI labels seen in your design
@@ -28,17 +39,33 @@ const categoryLabels: Record<TransactionCategory, string> = {
 const categoryKeys = Object.keys(categoryConfig) as TransactionCategory[];
 
 const CreateGroupPage = () => {
-	// Form State - Defaulting to 'transport' (which displays as 'Travel')
+	const { session } = useAuth();
+	const navigate = useNavigate();
+
 	const [groupName, setGroupName] = useState("");
 	const [description, setDescription] = useState("");
 	const [selectedCategory, setSelectedCategory] = useState<TransactionCategory>('transport');
 	const [inviteEmail, setInviteEmail] = useState("");
-
 	const [members, setMembers] = useState<Member[]>(mockMembers);
+	const [isLoading, setIsLoading] = useState(false);
+	const [apiError, setApiError] = useState<string | null>(null);
 
-	const handleCreateGroup = () => {
-		const newGroup = { groupName, description, category: selectedCategory, members };
-		console.log("Creating Group:", newGroup);
+	const handleCreateGroup = async () => {
+		if (!groupName.trim() || !session?.access_token) return;
+		setApiError(null);
+		setIsLoading(true);
+		try {
+			await groupService.createGroup(
+				{ name: groupName.trim(), description: description.trim() || undefined, category: categoryToBackend[selectedCategory] },
+				session.access_token
+			);
+			navigate('/dashboard');
+		} catch (err: unknown) {
+			const message = err instanceof Error ? err.message : 'Failed to create group';
+			setApiError(message);
+		} finally {
+			setIsLoading(false);
+		}
 	};
 
 	return (
@@ -109,11 +136,14 @@ const CreateGroupPage = () => {
 						</div>
 					</div>
 
-					<div className="mt-8 pt-6 border-t border-slate-100 flex items-center justify-end gap-3">
-						<Button variant="outline" className="py-2.5 px-6">Cancel</Button>
-						<Button variant="primary" onClick={handleCreateGroup} className="py-2.5 px-6">
-							✓ Create Group
-						</Button>
+					<div className="mt-8 pt-6 border-t border-slate-100 flex flex-col gap-3">
+						{apiError && <p className="text-red-500 text-sm">{apiError}</p>}
+						<div className="flex items-center justify-end gap-3">
+							<Button variant="outline" className="py-2.5 px-6" onClick={() => navigate('/dashboard')}>Cancel</Button>
+							<Button variant="primary" onClick={handleCreateGroup} disabled={!groupName.trim() || isLoading} className="py-2.5 px-6">
+								{isLoading ? 'Creating…' : '✓ Create Group'}
+							</Button>
+						</div>
 					</div>
 				</div>
 
