@@ -8,10 +8,11 @@ interface Props {
 	membersCount: number;
 	// In a real app, an array of member objects here
 	memberNames: string[];
+	monthlyChange?: number | null;
 
 }
 
-const TotalBalanceCard = ({ totalBalance = 0, posBalance = 0, negBalance = 0, membersCount, memberNames }: Props) => {
+const TotalBalanceCard = ({ totalBalance = 0, posBalance = 0, negBalance = 0, membersCount, memberNames, monthlyChange = null }: Props) => {
 
 
 	const avatarColors = [
@@ -19,6 +20,23 @@ const TotalBalanceCard = ({ totalBalance = 0, posBalance = 0, negBalance = 0, me
 		"bg-teal-100 text-teal-700",
 		"bg-orange-100 text-orange-700"
 	];
+
+	let badgeColor = "bg-slate-100 text-slate-500"; // Neutral for "New"
+	let badgeText = "New this month";
+
+	if (monthlyChange !== null) {
+		if (monthlyChange > 0) {
+			badgeColor = "bg-teal-50 text-teal-600";
+			badgeText = `+${monthlyChange.toFixed(0)}% this month`;
+		} else if (monthlyChange < 0) {
+			badgeColor = "bg-red-50 text-red-600";
+			badgeText = `${monthlyChange.toFixed(0)}% this month`;
+		} else {
+			badgeColor = "bg-slate-100 text-slate-500";
+			badgeText = "No change";
+		}
+	}
+
 	return (
 		<Card className="p-8">
 			<div className="flex flex-col md:flex-row justify-between items-start gap-6">
@@ -33,8 +51,8 @@ const TotalBalanceCard = ({ totalBalance = 0, posBalance = 0, negBalance = 0, me
 							{totalBalance < 0 ? '-' : '+'}$ {totalBalance}
 						</span>
 						{/* The Percentage Badge */}
-						<span className="bg-teal-50 text-teal-600 text-xs font-bold px-2.5 py-1 rounded-full">
-							+0% this month
+						<span className={`${badgeColor} text-xs font-bold px-2.5 py-1 rounded-full`}>
+							{badgeText}
 						</span>
 					</div>
 
