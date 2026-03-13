@@ -1,10 +1,45 @@
-import { HomeIcon } from '@heroicons/react/24/solid';
 import CreateGroupCard from './CreateGroupCard';
-import GroupCard from './GroupCard';
+import GroupCard  from './GroupCard';
 import { Link } from 'react-router-dom';
+import { toast } from 'react-toastify';
+import { 
+    PaperAirplaneIcon, 
+    HomeIcon, 
+    HeartIcon, 
+    UsersIcon, 
+    TagIcon 
+} from '@heroicons/react/24/solid';
+import type { DashboardGroup } from '../../services/dashboardService';
 
+interface Props {
+	groups: DashboardGroup[];
+}
 
-const GroupGrid = () => {
+const getCategoryStyles = (category: string) => {
+    switch (category.toLowerCase()) {
+        case 'trip': case 'travel': return 'bg-blue-50 text-blue-500';
+        case 'home': return 'bg-indigo-50 text-indigo-500';
+        case 'couple': return 'bg-pink-50 text-pink-500';
+        case 'friends': return 'bg-yellow-50 text-yellow-500';
+        case 'other': 
+        default: return 'bg-slate-100 text-slate-500'; 
+    }
+};
+
+const getCategoryIcon = (category: string) => {
+    const className = "w-5 h-5";
+    switch (category.toLowerCase()) {
+        case 'trip': case 'travel': return <PaperAirplaneIcon className={className} />;
+        case 'home': return <HomeIcon className={className} />;
+        case 'couple': return <HeartIcon className={className} />;
+        case 'friends': return <UsersIcon className={className} />;
+        case 'other':
+        default: return <TagIcon className={className} />;
+    }
+};
+
+const GroupGrid = ( { groups } : Props  ) => {
+
 	return (
 		<>
 			<div className="flex justify-between items-center">
@@ -20,34 +55,19 @@ const GroupGrid = () => {
 			</div>
 			<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-				<GroupCard
-					title="Trip to Cabo"
-					lastActivity="2 days ago"
-					// Passing a placeholder SVG icon, you can use Heroicons here!
-					icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064" /></svg>}
-					iconBgClass="bg-blue-50 text-blue-500"
-					status="owed"
-					amount="$120.00"
-				/>
+				{groups.map((group) => (
+					<GroupCard
+						key={group.id}
+						title={group.name}
+						lastActivity={group.updatedAt}
+						status={group.status}
+						amount={group.amount || undefined}
+						iconBgClass={getCategoryStyles(group.category)}
+						icon={getCategoryIcon(group.category)}
+					/>
+				))}
 
-				<GroupCard
-					title="House Rent"
-					lastActivity="Yesterday"
-					icon={<HomeIcon />}
-					iconBgClass="bg-indigo-50 text-indigo-500"
-					status="owe"
-					amount="$55.00"
-				/>
-
-				<GroupCard
-					title="Pizza Night"
-					lastActivity="5 days ago"
-					icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
-					iconBgClass="bg-yellow-50 text-yellow-500"
-					status="settled"
-				/>
-
-				<CreateGroupCard />
+				<CreateGroupCard handleClick={() => toast.success("Create new group clicked", {position: "bottom-center",autoClose: 3000,})} />
 
 			</div>
 		</>
