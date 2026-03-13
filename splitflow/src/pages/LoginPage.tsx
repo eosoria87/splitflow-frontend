@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { useForm, type FieldValues } from 'react-hook-form';
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { EyeIcon } from "@heroicons/react/24/outline";
 import Logo from "../components/ui/Logo";
 import Button from "../components/ui/Button";
 import FooterBar from "../components/navigation/FooterBar";
+import { useAuth } from "../hooks/useAuth";
+import authService from "../services/authService";
 
 interface FormData {
 	email: string;
@@ -13,14 +15,32 @@ interface FormData {
 
 const LoginPage = () => {
 	const [showPassword, setShowPassword] = useState<boolean>(false);
-	
+	const [apiError, setApiError] = useState<string | null>(null);
 	const { register, handleSubmit, formState: { errors, isValid } } = useForm<FormData>({mode: 'onChange'});
+	const { login, isLoading } = useAuth();
+	const navigate = useNavigate();
 
-	const onSubmit = (data: FieldValues) => console.log(data);
-	
-	const handleSignUpGoogle = () => {
-		console.log('signed up by Google');
-	}
+	const onSubmit = async (data: FieldValues) => {
+		setApiError(null);
+		try {
+			await login({ email: data.email, password: data.password });
+			navigate('/dashboard');
+		} catch (err: unknown) {
+			const message = err instanceof Error ? err.message : 'Something went wrong. Please try again.';
+			setApiError(message);
+		}
+	};
+
+	const handleLoginGoogle = async () => {
+		setApiError(null);
+		try {
+			const { url } = await authService.googleAuth();
+			window.location.href = url;
+		} catch (err: unknown) {
+			const message = err instanceof Error ? err.message : 'Google sign-in failed';
+			setApiError(message);
+		}
+	};
 
 	return (
 		<div className="h-full w-full flex items-center justify-center overflow-hidden ">
@@ -81,8 +101,11 @@ const LoginPage = () => {
 							<EyeIcon className="size-5" />
 						</button>
 					</div> {/* password input/eye icon div ending*/}
-					<Button disabled={!isValid} variant='primary' className="w-full mt-2 py-3.5" size="lg" type="submit">
-						Log In
+					{apiError && (
+						<p className="text-red-500 text-sm">{apiError}</p>
+					)}
+					<Button disabled={!isValid || isLoading} variant='primary' className="w-full mt-2 py-3.5" size="lg" type="submit">
+						{isLoading ? 'Logging in…' : 'Log In'}
 					</Button>
 				</form>
 				<div className="text-center mt-6 text-sm text-slate-500 font-regular">
@@ -93,7 +116,7 @@ const LoginPage = () => {
           <span className="text-xs font-regular text-slate-400 tracking-wider">OR CONTINUE WITH</span>
           <div className="flex-1 h-px bg-slate-100"></div>
 				</div>
-				<Button variant='outline' className="w-full mt-2" onClick={handleSignUpGoogle}>
+				<Button variant='outline' className="w-full mt-2" onClick={handleLoginGoogle}>
 					<span className="inline-flex items-center gap-2">
 						<svg viewBox="0 0 24 24" width="18" height="18" xmlns="http://www.w3.org/2000/svg">
 							<g transform="matrix(1, 0, 0, 1, 27.009001, -39.238998)">
