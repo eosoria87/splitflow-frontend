@@ -1,58 +1,98 @@
-import { HomeIcon } from '@heroicons/react/24/solid';
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import {
+  PaperAirplaneIcon,
+  HomeIcon,
+  HeartIcon,
+  UserGroupIcon,
+  Squares2X2Icon,
+} from '@heroicons/react/24/outline';
 import CreateGroupCard from './CreateGroupCard';
 import GroupCard from './GroupCard';
-import { Link } from 'react-router-dom';
+import groupService, { type Group } from '../../services/groupService';
+import { useAuth } from '../../hooks/useAuth';
 
+// Maps backend category values to icon + colour
+const categoryMeta: Record<string, { icon: React.ReactNode; iconBgClass: string }> = {
+  travel:        { icon: <PaperAirplaneIcon className="w-5 h-5" />, iconBgClass: 'bg-blue-50 text-blue-500' },
+  home:          { icon: <HomeIcon className="w-5 h-5" />,          iconBgClass: 'bg-indigo-50 text-indigo-500' },
+  couple:        { icon: <HeartIcon className="w-5 h-5" />,         iconBgClass: 'bg-pink-50 text-pink-500' },
+  friends:       { icon: <UserGroupIcon className="w-5 h-5" />,     iconBgClass: 'bg-teal-50 text-teal-500' },
+  other:         { icon: <Squares2X2Icon className="w-5 h-5" />,    iconBgClass: 'bg-slate-100 text-slate-500' },
+};
+
+const fallbackMeta = { icon: <Squares2X2Icon className="w-5 h-5" />, iconBgClass: 'bg-slate-100 text-slate-500' };
+
+const formatRelativeTime = (isoDate: string): string => {
+  const diff = Date.now() - new Date(isoDate).getTime();
+  const days = Math.floor(diff / 86_400_000);
+  if (days === 0) return 'Today';
+  if (days === 1) return 'Yesterday';
+  if (days < 30) return `${days} days ago`;
+  const months = Math.floor(days / 30);
+  return months === 1 ? '1 month ago' : `${months} months ago`;
+};
+
+const Skeleton = () => (
+  <div className="animate-pulse bg-white rounded-2xl border border-slate-100 p-5 h-40 flex flex-col gap-3">
+    <div className="flex justify-between">
+      <div className="w-10 h-10 rounded-xl bg-slate-100" />
+      <div className="w-20 h-6 rounded-full bg-slate-100" />
+    </div>
+    <div className="w-32 h-4 rounded bg-slate-100" />
+    <div className="w-24 h-3 rounded bg-slate-100" />
+  </div>
+);
 
 const GroupGrid = () => {
-	return (
-		<>
-			<div className="flex justify-between items-center">
-				<h2 className="text-lg font-bold text-slate-900">
-					Your Groups
-				</h2>
-				<Link
-					to="/groups"
-					className="text-sm font-medium text-teal-500 hover:text-teal-600 transition-colors"
-				>
-					See all
-				</Link>
-			</div>
-			<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+  const { session } = useAuth();
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-				<GroupCard
-					title="Trip to Cabo"
-					lastActivity="2 days ago"
-					// Passing a placeholder SVG icon, you can use Heroicons here!
-					icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064" /></svg>}
-					iconBgClass="bg-blue-50 text-blue-500"
-					status="owed"
-					amount="$120.00"
-				/>
+  useEffect(() => {
+    if (!session?.access_token) return;
+    groupService.getGroups(session.access_token)
+      .then(setGroups)
+      .catch(console.error)
+      .finally(() => setIsLoading(false));
+  }, [session?.access_token]);
 
-				<GroupCard
-					title="House Rent"
-					lastActivity="Yesterday"
-					icon={<HomeIcon />}
-					iconBgClass="bg-indigo-50 text-indigo-500"
-					status="owe"
-					amount="$55.00"
-				/>
+  return (
+    <>
+      <div className="flex justify-between items-center">
+        <h2 className="text-lg font-bold text-slate-900">Your Groups</h2>
+        <Link to="/groups" className="text-sm font-medium text-teal-500 hover:text-teal-600 transition-colors">
+          See all
+        </Link>
+      </div>
 
-				<GroupCard
-					title="Pizza Night"
-					lastActivity="5 days ago"
-					icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
-					iconBgClass="bg-yellow-50 text-yellow-500"
-					status="settled"
-				/>
-
-				<CreateGroupCard />
-
-			</div>
-		</>
-	);
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {isLoading ? (
+          <>
+            <Skeleton />
+            <Skeleton />
+          </>
+        ) : (
+          <>
+            {groups.map((group) => {
+              const meta = categoryMeta[group.category ?? ''] ?? fallbackMeta;
+              return (
+                <GroupCard
+                  key={group.id}
+                  title={group.name}
+                  lastActivity={formatRelativeTime(group.created_at)}
+                  icon={meta.icon}
+                  iconBgClass={meta.iconBgClass}
+                  status="settled"
+                />
+              );
+            })}
+            <CreateGroupCard />
+          </>
+        )}
+      </div>
+    </>
+  );
 };
 
 export default GroupGrid;
-

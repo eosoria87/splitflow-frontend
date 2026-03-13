@@ -17,6 +17,15 @@ export interface CreateGroupPayload {
 }
 
 const groupService = {
+  async getGroups(token: string): Promise<Group[]> {
+    const res = await fetch(`${API_URL}/api/groups`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error ?? 'Failed to fetch groups');
+    return data.groups;
+  },
+
   async createGroup(payload: CreateGroupPayload, token: string): Promise<Group> {
     const res = await fetch(`${API_URL}/api/groups`, {
       method: 'POST',
