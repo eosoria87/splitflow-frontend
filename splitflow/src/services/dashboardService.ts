@@ -1,6 +1,15 @@
 import { apiClient } from "../helper/apiClient";
 
+export const DASHBOARD_CACHE_KEY = 'sf_dashboard';
+
 // ── Types ────────────────────────────────────────────────────────────────────
+
+interface RawGroup {
+	id: string;
+	name: string;
+	category: string;
+	updated_at: string;
+}
 
 export interface DashboardGroup {
 	id: string;
@@ -32,45 +41,42 @@ export interface OverallBalances {
 
 export const dashboardService = {
 
-	getUserGroups: async (): Promise<DashboardGroup[]> => {
+	// SRP: sole job is to fetch raw groups from the API
+	getGroups: async (): Promise<RawGroup[]> => {
 		try {
 			const response = await apiClient.get('/groups');
-			const groups = response.data.groups;
-
-			if (!groups) return [];
-
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			return groups.map((g: any) => ({
-				id: g.id,
-				name: g.name,
-				category: g.category || 'other',
-				updatedAt: new Date(g.updated_at).toLocaleDateString(),
-				status: 'settled', // You can update this later when you link it to the balances!
-				amount: '$0.00',
-			}));
+			return response.data.groups ?? [];
 		} catch (error) {
 			console.error("Axios error fetching groups:", error);
 			return [];
 		}
 	},
 
-	getRecentActivity: async (currentUserId: string): Promise<DashboardActivity[]> => {
+	// SRP: sole job is to transform raw groups into UI shape (no fetching)
+	getUserGroups: (groups: RawGroup[]): DashboardGroup[] => {
+		return groups.map((g) => ({
+			id: g.id,
+			name: g.name,
+			category: g.category || 'other',
+			updatedAt: new Date(g.updated_at).toLocaleDateString(),
+			status: 'settled', // You can update this later when you link it to the balances!
+			amount: '$0.00',
+		}));
+	},
+
+	// SRP: receives groups, fetches expenses, maps to activity UI shape
+	getRecentActivity: async (currentUserId: string, groups: RawGroup[]): Promise<DashboardActivity[]> => {
 		try {
+			if (groups.length === 0) return [];
 
-			const groupsResponse = await apiClient.get('/groups');
-			const groups = groupsResponse.data.groups;
-
-			if (!groups || groups.length === 0) return [];
-
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			const expensePromises = groups.map((g: any) => apiClient.get(`/groups/${g.id}/expenses`));
+			const expensePromises = groups.map((g) => apiClient.get(`/groups/${g.id}/expenses`));
 			const expenseResponses = await Promise.allSettled(expensePromises);
 
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			let allExpenses: any[] = [];
+			const allExpenses: any[] = [];
 			expenseResponses.forEach((res) => {
 				if (res.status === 'fulfilled' && res.value.data.expenses) {
-					allExpenses = [...allExpenses, ...res.value.data.expenses];
+					allExpenses.push(...res.value.data.expenses);
 				}
 			});
 
@@ -99,29 +105,27 @@ export const dashboardService = {
 		}
 	},
 
-	getOverallBalances: async (currentUserId: string): Promise<OverallBalances> => {
+	// SRP: receives groups, fetches balances + expenses, calculates totals
+	getOverallBalances: async (currentUserId: string, groups: RawGroup[]): Promise<OverallBalances> => {
+		const empty = { totalBalance: 0, posBalance: 0, negBalance: 0, monthlyChange: null };
 		try {
-			const groupsResponse = await apiClient.get('/groups');
-			const groups = groupsResponse.data.groups;
-
-			if (!groups || groups.length === 0) {
-				return { totalBalance: 0, posBalance: 0, negBalance: 0, monthlyChange: null };
-			}
+			if (groups.length === 0) return empty;
 
 			// 1. Fetch Balances AND Expenses in parallel for all groups
-			const balancePromises = groups.map((g: any) => apiClient.get(`/groups/${g.id}/balances`));
-			const expensePromises = groups.map((g: any) => apiClient.get(`/groups/${g.id}/expenses`));
+			const balancePromises = groups.map((g) => apiClient.get(`/groups/${g.id}/balances`));
+			const expensePromises = groups.map((g) => apiClient.get(`/groups/${g.id}/expenses`));
 
 			const [balanceResponses, expenseResponses] = await Promise.all([
 				Promise.allSettled(balancePromises),
 				Promise.allSettled(expensePromises)
 			]);
 
-			// 2. Calculate All-Time Totals 
+			// 2. Calculate All-Time Totals
 			let posBalance = 0; let negBalance = 0; let totalBalance = 0;
 
 			balanceResponses.forEach((res) => {
 				if (res.status === 'fulfilled' && res.value.data.balances) {
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
 					const yourBalance = res.value.data.balances.find((b: any) => b.userId === currentUserId);
 					if (yourBalance) {
 						const net = yourBalance.netBalance;
@@ -146,6 +150,7 @@ export const dashboardService = {
 
 			expenseResponses.forEach((res) => {
 				if (res.status === 'fulfilled' && res.value.data.expenses) {
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
 					res.value.data.expenses.forEach((expense: any) => {
 						const expenseDate = new Date(expense.date || expense.created_at);
 
@@ -156,6 +161,7 @@ export const dashboardService = {
 							const isPayer = expense.paid_by === currentUserId;
 							const paidAmount = isPayer ? expense.amount : 0;
 
+							// eslint-disable-next-line @typescript-eslint/no-explicit-any
 							const myParticipantRecord = expense.participants.find((p: any) => p.user_id === currentUserId);
 							const myShare = myParticipantRecord ? myParticipantRecord.share : 0;
 
@@ -178,11 +184,39 @@ export const dashboardService = {
 			return { totalBalance, posBalance, negBalance, monthlyChange };
 		} catch (error) {
 			console.error("Axios error fetching balances:", error);
-			return { totalBalance: 0, posBalance: 0, negBalance: 0, monthlyChange: null };
+			return empty;
 		}
 	}
 };
 
+// ── Prefetch ──────────────────────────────────────────────────────────────────
 
+// Fetches all dashboard data and writes it to sessionStorage.
+// No-op if cache already exists. Safe to call multiple times.
+export const prefetchDashboard = (userId: string): void => {
+	if (sessionStorage.getItem(DASHBOARD_CACHE_KEY)) return;
 
+	dashboardService.getGroups()
+		.then(async (groups) => {
+			if (groups.length === 0) return;
+			const [balanceData, activityData] = await Promise.all([
+				dashboardService.getOverallBalances(userId, groups),
+				dashboardService.getRecentActivity(userId, groups),
+			]);
+			const userGroups = dashboardService.getUserGroups(groups);
+			sessionStorage.setItem(DASHBOARD_CACHE_KEY, JSON.stringify({
+				balances: balanceData,
+				userGroups,
+				recentActivity: activityData,
+			}));
+		})
+		.catch(() => { /* silent — DashboardPage will fetch on mount */ });
+};
 
+// Auto-start: fires as soon as this module loads (at app startup).
+// At that point localStorage already has the session, so the fetch races
+// ahead of React rendering and may be complete by the time DashboardPage mounts.
+try {
+	const userRaw = localStorage.getItem('sf_user');
+	if (userRaw) prefetchDashboard(JSON.parse(userRaw).id);
+} catch { /* silent */ }

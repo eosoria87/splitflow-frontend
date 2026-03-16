@@ -7,7 +7,8 @@ export const apiClient = axios.create({
 });
 
 apiClient.interceptors.request.use((config) => {
-    const token = localStorage.getItem('access_token');
+    const stored = localStorage.getItem('sf_session');
+    const token = stored ? JSON.parse(stored).access_token : null;
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }

@@ -59,6 +59,7 @@ const LoginPage = () => {
 						<input
 						{...register('email', { required: true, pattern: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
 						})}
+							id="email"
 							type="email"
 							placeholder="name@company.com"
 							autoComplete="email"
@@ -82,6 +83,7 @@ const LoginPage = () => {
 					<div className="relative">
 						<input
 							{...register('password', {required: true, minLength: 8})}
+							id="password"
 							type={showPassword ? "text" : "password"}
 							autoComplete="current-password"
 							placeholder="••••••••"

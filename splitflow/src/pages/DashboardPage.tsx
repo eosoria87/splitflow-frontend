@@ -5,34 +5,59 @@ import TotalBalanceCard from "../components/dashboard/TotalBalanceCard";
 import GroupGrid from "../components/dashboard/GroupGrid";
 import RecentActivityCard from "../components/dashboard/RecentActivityCard";
 import MainContainer from "../components/ui/MainContainer";
-import { dashboardService, type DashboardActivity, type DashboardGroup } from "../services/dashboardService";
+import { dashboardService, DASHBOARD_CACHE_KEY, type DashboardActivity, type DashboardGroup, type OverallBalances } from "../services/dashboardService";
 import { useAuth } from "../hooks/useAuth";
 
+const CACHE_KEY = DASHBOARD_CACHE_KEY;
+
+interface DashboardCache {
+	balances: OverallBalances;
+	userGroups: DashboardGroup[];
+	recentActivity: DashboardActivity[];
+}
+
+const loadCache = (): DashboardCache | null => {
+	try {
+		const stored = sessionStorage.getItem(CACHE_KEY);
+		return stored ? JSON.parse(stored) : null;
+	} catch {
+		return null;
+	}
+};
 
 const DashboardPage = () => {
 
 	const { user, isLoading } = useAuth();
+	const cache = loadCache();
 
-	const [balances, setBalances] = useState({ 
-		totalBalance: 0, posBalance: 0, negBalance: 0, monthlyChange: null as number | null
-	});
-	const [userGroups, setUserGroups] = useState<DashboardGroup[]>([]);
-	const [recentActivity, setRecentActivity] = useState<DashboardActivity[]>([]);
+	const [balances, setBalances] = useState<OverallBalances>(
+		cache?.balances ?? { totalBalance: 0, posBalance: 0, negBalance: 0, monthlyChange: null }
+	);
+	const [userGroups, setUserGroups] = useState<DashboardGroup[]>(cache?.userGroups ?? []);
+	const [recentActivity, setRecentActivity] = useState<DashboardActivity[]>(cache?.recentActivity ?? []);
 
 	useEffect(() => {
 		const fetchDashboardData = async () => {
 			if (!user) return;
 
-			const currentUserId = user.id;
+			const groups = await dashboardService.getGroups();
 
-			const balanceData = await dashboardService.getOverallBalances(currentUserId);
-			if (balanceData) setBalances(balanceData);
+			const [balanceData, activityData] = await Promise.all([
+				dashboardService.getOverallBalances(user.id, groups),
+				dashboardService.getRecentActivity(user.id, groups),
+			]);
 
-			const groupsData = await dashboardService.getUserGroups();
-			if (groupsData) setUserGroups(groupsData);
+			const freshGroups = dashboardService.getUserGroups(groups);
 
-			const activityData = await dashboardService.getRecentActivity(currentUserId);
-			if (activityData) setRecentActivity(activityData);
+			setBalances(balanceData);
+			setUserGroups(freshGroups);
+			setRecentActivity(activityData);
+
+			sessionStorage.setItem(CACHE_KEY, JSON.stringify({
+				balances: balanceData,
+				userGroups: freshGroups,
+				recentActivity: activityData,
+			}));
 		};
 
 		fetchDashboardData();

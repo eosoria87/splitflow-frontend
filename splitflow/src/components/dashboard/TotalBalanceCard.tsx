@@ -12,7 +12,7 @@ interface Props {
 
 }
 
-const TotalBalanceCard = ({ totalBalance = 0, posBalance = 0, negBalance = 0, membersCount, memberNames, monthlyChange = null }: Props) => {
+const TotalBalanceCard = ({ totalBalance, posBalance, negBalance, membersCount, memberNames, monthlyChange = null }: Props) => {
 
 
 	const avatarColors = [
@@ -48,7 +48,7 @@ const TotalBalanceCard = ({ totalBalance = 0, posBalance = 0, negBalance = 0, me
 
 					<div className="flex items-center gap-3">
 						<span className="text-4xl md:text-5xl font-bold text-slate-900">
-							{totalBalance < 0 ? '-' : '+'}$ {totalBalance}
+							{totalBalance < 0 ? '-' : '+'}$ {Math.abs(totalBalance)}
 						</span>
 						{/* The Percentage Badge */}
 						<span className={`${badgeColor} text-xs font-bold px-2.5 py-1 rounded-full`}>
