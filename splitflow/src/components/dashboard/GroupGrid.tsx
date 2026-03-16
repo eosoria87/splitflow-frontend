@@ -1,78 +1,98 @@
-import CreateGroupCard from './CreateGroupCard';
-import GroupCard  from './GroupCard';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { toast } from 'react-toastify';
-import { 
-    PaperAirplaneIcon, 
-    HomeIcon, 
-    HeartIcon, 
-    UsersIcon, 
-    TagIcon 
-} from '@heroicons/react/24/solid';
-import type { DashboardGroup } from '../../services/dashboardService';
+import {
+  PaperAirplaneIcon,
+  HomeIcon,
+  HeartIcon,
+  UserGroupIcon,
+  Squares2X2Icon,
+} from '@heroicons/react/24/outline';
+import CreateGroupCard from './CreateGroupCard';
+import GroupCard from './GroupCard';
+import groupService, { type Group } from '../../services/groupService';
+import { useAuth } from '../../hooks/useAuth';
 
-interface Props {
-	groups: DashboardGroup[];
-}
-
-const getCategoryStyles = (category: string) => {
-    switch (category.toLowerCase()) {
-        case 'trip': case 'travel': return 'bg-blue-50 text-blue-500';
-        case 'home': return 'bg-indigo-50 text-indigo-500';
-        case 'couple': return 'bg-pink-50 text-pink-500';
-        case 'friends': return 'bg-yellow-50 text-yellow-500';
-        case 'other': 
-        default: return 'bg-slate-100 text-slate-500'; 
-    }
+// Maps backend category values to icon + colour
+const categoryMeta: Record<string, { icon: React.ReactNode; iconBgClass: string }> = {
+  travel:        { icon: <PaperAirplaneIcon className="w-5 h-5" />, iconBgClass: 'bg-blue-50 text-blue-500' },
+  home:          { icon: <HomeIcon className="w-5 h-5" />,          iconBgClass: 'bg-indigo-50 text-indigo-500' },
+  couple:        { icon: <HeartIcon className="w-5 h-5" />,         iconBgClass: 'bg-pink-50 text-pink-500' },
+  friends:       { icon: <UserGroupIcon className="w-5 h-5" />,     iconBgClass: 'bg-teal-50 text-teal-500' },
+  other:         { icon: <Squares2X2Icon className="w-5 h-5" />,    iconBgClass: 'bg-slate-100 text-slate-500' },
 };
 
-const getCategoryIcon = (category: string) => {
-    const className = "w-5 h-5";
-    switch (category.toLowerCase()) {
-        case 'trip': case 'travel': return <PaperAirplaneIcon className={className} />;
-        case 'home': return <HomeIcon className={className} />;
-        case 'couple': return <HeartIcon className={className} />;
-        case 'friends': return <UsersIcon className={className} />;
-        case 'other':
-        default: return <TagIcon className={className} />;
-    }
+const fallbackMeta = { icon: <Squares2X2Icon className="w-5 h-5" />, iconBgClass: 'bg-slate-100 text-slate-500' };
+
+const formatRelativeTime = (isoDate: string): string => {
+  const diff = Date.now() - new Date(isoDate).getTime();
+  const days = Math.floor(diff / 86_400_000);
+  if (days === 0) return 'Today';
+  if (days === 1) return 'Yesterday';
+  if (days < 30) return `${days} days ago`;
+  const months = Math.floor(days / 30);
+  return months === 1 ? '1 month ago' : `${months} months ago`;
 };
 
-const GroupGrid = ( { groups } : Props  ) => {
+const Skeleton = () => (
+  <div className="animate-pulse bg-white rounded-2xl border border-slate-100 p-5 h-40 flex flex-col gap-3">
+    <div className="flex justify-between">
+      <div className="w-10 h-10 rounded-xl bg-slate-100" />
+      <div className="w-20 h-6 rounded-full bg-slate-100" />
+    </div>
+    <div className="w-32 h-4 rounded bg-slate-100" />
+    <div className="w-24 h-3 rounded bg-slate-100" />
+  </div>
+);
 
-	return (
-		<>
-			<div className="flex justify-between items-center">
-				<h2 className="text-lg font-bold text-slate-900">
-					Your Groups
-				</h2>
-				<Link
-					to="/groups"
-					className="text-sm font-medium text-teal-500 hover:text-teal-600 transition-colors"
-				>
-					See all
-				</Link>
-			</div>
-			<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+const GroupGrid = () => {
+  const { session } = useAuth();
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-				{groups.map((group) => (
-					<GroupCard
-						key={group.id}
-						title={group.name}
-						lastActivity={group.updatedAt}
-						status={group.status}
-						amount={group.amount || undefined}
-						iconBgClass={getCategoryStyles(group.category)}
-						icon={getCategoryIcon(group.category)}
-					/>
-				))}
+  useEffect(() => {
+    if (!session?.access_token) return;
+    groupService.getGroups(session.access_token)
+      .then(setGroups)
+      .catch(console.error)
+      .finally(() => setIsLoading(false));
+  }, [session?.access_token]);
 
-				<CreateGroupCard handleClick={() => toast.success("Create new group clicked", {position: "bottom-center",autoClose: 3000,})} />
+  return (
+    <>
+      <div className="flex justify-between items-center">
+        <h2 className="text-lg font-bold text-slate-900">Your Groups</h2>
+        <Link to="/groups" className="text-sm font-medium text-teal-500 hover:text-teal-600 transition-colors">
+          See all
+        </Link>
+      </div>
 
-			</div>
-		</>
-	);
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {isLoading ? (
+          <>
+            <Skeleton />
+            <Skeleton />
+          </>
+        ) : (
+          <>
+            {groups.map((group) => {
+              const meta = categoryMeta[group.category ?? ''] ?? fallbackMeta;
+              return (
+                <GroupCard
+                  key={group.id}
+                  title={group.name}
+                  lastActivity={formatRelativeTime(group.created_at)}
+                  icon={meta.icon}
+                  iconBgClass={meta.iconBgClass}
+                  status="settled"
+                />
+              );
+            })}
+            <CreateGroupCard />
+          </>
+        )}
+      </div>
+    </>
+  );
 };
 
 export default GroupGrid;
-
