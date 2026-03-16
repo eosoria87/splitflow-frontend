@@ -1,234 +1,222 @@
-import { supabase } from "../helper/supabaseClient";
+import { apiClient } from "../helper/apiClient";
 
-export interface OverallBalances {
-    totalBalance: number;
-    posBalance: number;
-    negBalance: number;
+export const DASHBOARD_CACHE_KEY = 'sf_dashboard';
+
+// ── Types ────────────────────────────────────────────────────────────────────
+
+interface RawGroup {
+	id: string;
+	name: string;
+	category: string;
+	updated_at: string;
 }
 
 export interface DashboardGroup {
-    id: string;
-    name: string;
-    category: string;
-    updatedAt: string;
-    status: 'owed' | 'owe' | 'settled';
-    amount: string | null;
+	id: string;
+	name: string;
+	category: string;
+	updatedAt: string;
+	status: 'owed' | 'owe' | 'settled';
+	amount: string | null;
 }
 
 export interface DashboardActivity {
-    key: string;
-    personName: string;
-    action: string;
-    target: string;
-    time: string;
-    statusText: string;
-    statusColor: 'orange' | 'green' | 'teal' | 'slate';
+	key: string;
+	personName: string;
+	action: string;
+	target: string;
+	time: string;
+	statusText: string;
+	statusColor: 'orange' | 'green' | 'teal' | 'slate';
 }
+
+export interface OverallBalances {
+	totalBalance: number;
+	posBalance: number;
+	negBalance: number;
+	monthlyChange: number | null;
+}
+
+// ── Service ──────────────────────────────────────────────────────────────────
 
 export const dashboardService = {
 
-	getOverallBalances: async (userId: string): Promise<OverallBalances> => {
+	// SRP: sole job is to fetch raw groups from the API
+	getGroups: async (): Promise<RawGroup[]> => {
 		try {
-			// 1. Fetch expenses the user paid for entirely
-			const { data: expensesPaid } = await supabase
-				.from('expenses')
-				.select('group_id, amount')
-				.eq('paid_by', userId);
-
-			// 2. Fetch the user's specific share of expenses
-			// We use an inner join to get the group_id from the linked expenses table
-			const { data: userShares } = await supabase
-				.from('expense_participants')
-				.select(`
-                    share,
-                    expenses!inner ( group_id )
-                `)
-				.eq('user_id', userId);
-
-			// 3. Fetch settlements the user sent (paid back)
-			const { data: settlementsSent } = await supabase
-				.from('settlements')
-				.select('group_id, amount')
-				.eq('from_user', userId);
-
-			// 4. Fetch settlements the user received
-			const { data: settlementsReceived } = await supabase
-				.from('settlements')
-				.select('group_id, amount')
-				.eq('to_user', userId);
-
-			// --- THE MATH ---
-			// We use a dictionary to track the balance per group (e.g., { "group-uuid-1": 45.50, "group-uuid-2": -12.00 })
-			const groupBalances: Record<string, number> = {};
-
-			const addToGroup = (groupId: string, amount: number) => {
-				if (!groupBalances[groupId]) groupBalances[groupId] = 0;
-				groupBalances[groupId] += amount;
-			};
-
-			// Apply our formula: Paid - Share + Settlements Sent - Settlements Received
-			expensesPaid?.forEach(e => addToGroup(e.group_id, Number(e.amount)));
-
-			userShares?.forEach(s => {
-				// Because of the join, expenses is an object/array. We safely extract the group_id.
-				const groupId = Array.isArray(s.expenses) ? s.expenses[0].group_id : s.expenses.group_id;
-				addToGroup(groupId, -Number(s.share));
-			});
-
-			settlementsSent?.forEach(s => addToGroup(s.group_id, Number(s.amount)));
-			settlementsReceived?.forEach(s => addToGroup(s.group_id, -Number(s.amount)));
-
-			// Now we aggregate all the groups into our three final numbers
-			let posBalance = 0;
-			let negBalance = 0;
-			let totalBalance = 0;
-
-			Object.values(groupBalances).forEach(balance => {
-				if (balance > 0) {
-					posBalance += balance; // Money owed to you
-				} else if (balance < 0) {
-					negBalance += Math.abs(balance); // Money you owe
-				}
-				totalBalance += balance;
-			});
-
-			console.log("Calculated Balances:", { totalBalance, posBalance, negBalance });
-
-			return { totalBalance, posBalance, negBalance };
-
+			const response = await apiClient.get('/groups');
+			return response.data.groups ?? [];
 		} catch (error) {
-			console.error("Error calculating balances:", error);
-			return { totalBalance: 0, posBalance: 0, negBalance: 0 };
+			console.error("Axios error fetching groups:", error);
+			return [];
 		}
 	},
 
-	getUserGroups: async (userId: string): Promise<DashboardGroup[]> => {
-
-		const { data, error } = await supabase
-			.from('group_members')
-			.select(`
-                group_id,
-                groups (
-                    id,
-                    name,
-                    category,
-                    updated_at
-                )
-            `)
-			.eq('user_id', userId);
-
-		if (error) {
-			console.error("Supabase error fetching groups:", error);
-			return [];
-		}
-
-		if (!data || data.length === 0) return [];
-
-		console.log ("dashboardService rawdata: ", data);
-
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		const formattedGroups: DashboardGroup[] = data.map((row: any) => {
-			const groupData = row.groups;
-
-			const formattedDate = groupData.updated_at
-				? new Date(groupData.updated_at).toLocaleDateString()
-				: "Recently";
-
-			return {
-				id: groupData.id,
-				name: groupData.name,
-				category: groupData.category || 'other',
-				updatedAt: formattedDate,
-
-				status: 'settled',
-				amount: '$0.00',
-
-			};
-		});
-
-		return formattedGroups;
+	// SRP: sole job is to transform raw groups into UI shape (no fetching)
+	getUserGroups: (groups: RawGroup[]): DashboardGroup[] => {
+		return groups.map((g) => ({
+			id: g.id,
+			name: g.name,
+			category: g.category || 'other',
+			updatedAt: new Date(g.updated_at).toLocaleDateString(),
+			status: 'settled', // You can update this later when you link it to the balances!
+			amount: '$0.00',
+		}));
 	},
 
-	getRecentActivity: async (userId: string): Promise<DashboardActivity[]> => {
-		
-		const { data: memberData, error: memberError } = await supabase
-			.from('group_members')
-			.select('group_id')
-			.eq('user_id', userId);
+	// SRP: receives groups, fetches expenses, maps to activity UI shape
+	getRecentActivity: async (currentUserId: string, groups: RawGroup[]): Promise<DashboardActivity[]> => {
+		try {
+			if (groups.length === 0) return [];
 
-		if (memberError) {
-			console.error("Error fetching user's group memberships:", memberError);
+			const expensePromises = groups.map((g) => apiClient.get(`/groups/${g.id}/expenses`));
+			const expenseResponses = await Promise.allSettled(expensePromises);
+
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			const allExpenses: any[] = [];
+			expenseResponses.forEach((res) => {
+				if (res.status === 'fulfilled' && res.value.data.expenses) {
+					allExpenses.push(...res.value.data.expenses);
+				}
+			});
+
+			allExpenses.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+			const top5Expenses = allExpenses.slice(0, 5);
+
+			return top5Expenses.map(expense => {
+				const isYou = expense.paid_by === currentUserId;
+				const payerName = isYou ? 'You' : expense.payer_name;
+
+				return {
+					key: expense.id,
+					personName: payerName,
+					action: 'added',
+					target: expense.description,
+					time: new Date(expense.created_at).toLocaleDateString(),
+					statusText: isYou
+						? `You lent $${expense.amount.toFixed(2)}`
+						: `${payerName} paid $${expense.amount.toFixed(2)}`,
+					statusColor: isYou ? 'teal' : 'orange'
+				};
+			});
+		} catch (error) {
+			console.error("Axios error fetching activity:", error);
 			return [];
 		}
-
-		const groupIds = memberData?.map(m => m.group_id) || [];
-		console.log("Step 1: User's Group IDs:", groupIds);
-
-		if (groupIds.length === 0) return [];
-
-		const { data: expensesData, error: expensesError } = await supabase
-			.from('expenses')
-			.select(`
-						id,
-						description,
-						amount,
-						created_at,
-						paid_by
-						`)
-			.in('group_id', groupIds)
-			.order('created_at', { ascending: false })
-			.limit(5);
-
-		if (expensesError) {
-			console.log("Supabase error fetching expenses:", expensesError);
-			return [];
-		}
-
-		console.log("Step 2: Raw Expenses Data:", expensesData);
-		if (!expensesData || expensesData.length === 0) return [];
-
-		const uniquePayerIds = [...new Set(expensesData.map(exp => exp.paid_by))];
-
-		const { data: profilesData, error: profilesError } = await supabase
-			.from('profiles')
-			.select('id, name')
-			.in('id', uniquePayerIds);
-
-		if (profilesError) {
-			console.error("Error fetching profiles:", profilesError);
-		}
-		console.log("Step 3: Fetched Profiles: ", profilesData);
-
-		const profileLookup: Record<string, string> = {};
-		profilesData?.forEach(profile => {
-			profileLookup[profile.id] = profile.name;
-		});
-
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		const formattedActivity: DashboardActivity[] = expensesData.map((expense: any) => {
-			const isYou = expense.paid_by === userId;
-			const payerName = isYou ? 'You' : (profileLookup[expense.paid_by] || 'Someone');
-			const formattedTime = new Date(expense.created_at).toLocaleDateString();
-
-			return {
-				key: expense.id,
-				personName: payerName,
-				action: 'added',
-				target: expense.description,
-				time: formattedTime,
-				statusText: isYou
-					? `You lent $${expense.amount.toFixed(2)}`
-					: `${payerName} paid $${expense.amount.toFixed(2)}`,
-				statusColor: isYou ? 'teal' : 'orange'
-			};
-		});
-		console.log("Step 4: Final Mapped Activity:", formattedActivity);
-		return formattedActivity;
 	},
 
+	// SRP: receives groups, fetches balances + expenses, calculates totals
+	getOverallBalances: async (currentUserId: string, groups: RawGroup[]): Promise<OverallBalances> => {
+		const empty = { totalBalance: 0, posBalance: 0, negBalance: 0, monthlyChange: null };
+		try {
+			if (groups.length === 0) return empty;
 
+			// 1. Fetch Balances AND Expenses in parallel for all groups
+			const balancePromises = groups.map((g) => apiClient.get(`/groups/${g.id}/balances`));
+			const expensePromises = groups.map((g) => apiClient.get(`/groups/${g.id}/expenses`));
+
+			const [balanceResponses, expenseResponses] = await Promise.all([
+				Promise.allSettled(balancePromises),
+				Promise.allSettled(expensePromises)
+			]);
+
+			// 2. Calculate All-Time Totals
+			let posBalance = 0; let negBalance = 0; let totalBalance = 0;
+
+			balanceResponses.forEach((res) => {
+				if (res.status === 'fulfilled' && res.value.data.balances) {
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					const yourBalance = res.value.data.balances.find((b: any) => b.userId === currentUserId);
+					if (yourBalance) {
+						const net = yourBalance.netBalance;
+						totalBalance += net;
+						if (net > 0) posBalance += net;
+						if (net < 0) negBalance += Math.abs(net);
+					}
+				}
+			});
+
+			// 3. Calculate Month-Over-Month Change
+			let currentMonthNet = 0;
+			let lastMonthNet = 0;
+
+			const now = new Date();
+			const currentMonth = now.getMonth();
+			const currentYear = now.getFullYear();
+
+			const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+			const lastMonth = lastMonthDate.getMonth();
+			const lastMonthYear = lastMonthDate.getFullYear();
+
+			expenseResponses.forEach((res) => {
+				if (res.status === 'fulfilled' && res.value.data.expenses) {
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					res.value.data.expenses.forEach((expense: any) => {
+						const expenseDate = new Date(expense.date || expense.created_at);
+
+						const isCurrentMonth = expenseDate.getMonth() === currentMonth && expenseDate.getFullYear() === currentYear;
+						const isLastMonth = expenseDate.getMonth() === lastMonth && expenseDate.getFullYear() === lastMonthYear;
+
+						if (isCurrentMonth || isLastMonth) {
+							const isPayer = expense.paid_by === currentUserId;
+							const paidAmount = isPayer ? expense.amount : 0;
+
+							// eslint-disable-next-line @typescript-eslint/no-explicit-any
+							const myParticipantRecord = expense.participants.find((p: any) => p.user_id === currentUserId);
+							const myShare = myParticipantRecord ? myParticipantRecord.share : 0;
+
+							const netContribution = paidAmount - myShare;
+
+							if (isCurrentMonth) currentMonthNet += netContribution;
+							if (isLastMonth) lastMonthNet += netContribution;
+						}
+					});
+				}
+			});
+
+			let monthlyChange: number | null = null;
+			if (lastMonthNet !== 0) {
+				monthlyChange = ((currentMonthNet - lastMonthNet) / Math.abs(lastMonthNet)) * 100;
+			} else if (currentMonthNet !== 0 && lastMonthNet === 0) {
+				monthlyChange = 100;
+			}
+
+			return { totalBalance, posBalance, negBalance, monthlyChange };
+		} catch (error) {
+			console.error("Axios error fetching balances:", error);
+			return empty;
+		}
+	}
 };
 
+// ── Prefetch ──────────────────────────────────────────────────────────────────
 
+// Fetches all dashboard data and writes it to sessionStorage.
+// No-op if cache already exists. Safe to call multiple times.
+export const prefetchDashboard = (userId: string): void => {
+	if (sessionStorage.getItem(DASHBOARD_CACHE_KEY)) return;
 
+	dashboardService.getGroups()
+		.then(async (groups) => {
+			if (groups.length === 0) return;
+			const [balanceData, activityData] = await Promise.all([
+				dashboardService.getOverallBalances(userId, groups),
+				dashboardService.getRecentActivity(userId, groups),
+			]);
+			const userGroups = dashboardService.getUserGroups(groups);
+			sessionStorage.setItem(DASHBOARD_CACHE_KEY, JSON.stringify({
+				balances: balanceData,
+				userGroups,
+				recentActivity: activityData,
+			}));
+		})
+		.catch(() => { /* silent — DashboardPage will fetch on mount */ });
+};
 
+// Auto-start: fires as soon as this module loads (at app startup).
+// At that point localStorage already has the session, so the fetch races
+// ahead of React rendering and may be complete by the time DashboardPage mounts.
+try {
+	const userRaw = localStorage.getItem('sf_user');
+	if (userRaw) prefetchDashboard(JSON.parse(userRaw).id);
+} catch { /* silent */ }
