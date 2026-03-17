@@ -5,18 +5,23 @@ interface Props {
 	dateRange?: string;
 	location?: string;
 	membersCount: number;
-	// In a real app, an array of member objects here
 	memberAvatars: string[];
+	memberNames?: string[];
 }
 
-const GroupDetailsBar = ({ category, dateRange, location, membersCount, memberAvatars }: Props) => {
+const MAX_VISIBLE = 5;
 
-	// Calculate how many extra members aren't shown in the initial avatar stack
-	const extraMembers = membersCount - memberAvatars.length;
+const getInitials = (name: string) =>
+	name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
+
+const GroupDetailsBar = ({ category, dateRange, location, memberNames = [] }: Props) => {
+	const visible = memberNames.slice(0, MAX_VISIBLE);
+	const overflow = memberNames.length - MAX_VISIBLE;
 
 	return (
 		// -mt-4 pulls this bar slightly closer to the Header above it
-		<div className="xl:pl-64 px-4 sm:px-8 pb-8 flex flex-col md:flex-row md:items-center justify-between gap-6 -mt-4">
+		<div className="xl:pl-64 px-4 sm:px-8 pb-8 -mt-4">
+		<div className="bg-white border border-slate-100 rounded-2xl px-6 py-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
 
 			{/* --- LEFT SIDE: Meta Data --- */}
 			<div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm font-medium text-slate-500">
@@ -45,31 +50,37 @@ const GroupDetailsBar = ({ category, dateRange, location, membersCount, memberAv
 			</div>
 
 			{/* --- RIGHT SIDE: Member Avatars --- */}
-			<div className="flex items-center gap-3 shrink-0">
-				<span className="text-xs font-medium text-slate-400 uppercase tracking-widest hidden sm:block">
-					Members
-				</span>
+			{visible.length > 0 && (
+				<div className="flex items-center gap-3 shrink-0">
+					<span className="text-xs font-medium text-slate-400 uppercase tracking-widest hidden sm:block">
+						Members
+					</span>
 
-				{/* The Overlapping Avatar Stack */}
-				<div className="flex -space-x-2 overflow-hidden px-1">
-					{memberAvatars.map((avatarUrl, index) => (
-						<img
-							key={index}
-							className="inline-block h-8 w-8 rounded-full ring-2 ring-white object-cover"
-							src={avatarUrl}
-							alt={`Member ${index + 1}`}
-						/>
-					))}
+					{/* Initials Avatar Stack */}
+					<div className="flex -space-x-2">
+						{visible.map((name, i) => (
+							<div key={i} className="relative group">
+								<div className="w-8 h-8 rounded-full ring-2 ring-white bg-teal-50 text-teal-600 flex items-center justify-center text-xs font-bold cursor-default">
+									{getInitials(name)}
+								</div>
+								<div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-slate-800 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20">
+									{name}
+									<div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800" />
+								</div>
+							</div>
+						))}
 
-					{/* The "+X" Bubble */}
-					{extraMembers > 0 && (
-						<div className="flex items-center justify-center h-8 w-8 rounded-full ring-2 ring-white bg-slate-100 text-xs font-bold text-slate-500">
-							+{extraMembers}
-						</div>
-					)}
+						{/* Overflow bubble */}
+						{overflow > 0 && (
+							<div className="w-8 h-8 rounded-full ring-2 ring-white bg-slate-100 text-slate-500 flex items-center justify-center text-xs font-bold">
+								+{overflow}
+							</div>
+						)}
+					</div>
 				</div>
-			</div>
+			)}
 
+		</div>
 		</div>
 	);
 };

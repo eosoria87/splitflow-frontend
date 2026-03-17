@@ -33,7 +33,7 @@ function App() {
 						<Route path="/dashboard" element={<DashboardPage />} />
 						<Route path="/audit" element={<AuditLogPage />} />
 						<Route path="/balance" element={<BalancePage />} />
-						<Route path="/group" element={<GroupPage />} />
+						<Route path="/group/:id" element={<GroupPage />} />
 						<Route path="/create-group" element={<CreateGroupPage />} />
 					</Route>
 				</Routes>

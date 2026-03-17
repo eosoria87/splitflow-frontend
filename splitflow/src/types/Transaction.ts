@@ -1,4 +1,4 @@
-export type TransactionCategory = 'food' | 'transport' | 'accommodation' | 'shopping';
+export type TransactionCategory = 'food' | 'transport' | 'accommodation' | 'shopping' | 'entertainment' | 'utilities' | 'other';
 export type TransactionStatus = 'you owe' | 'you lent' | 'not involved';
 
 export interface GroupTransaction {
