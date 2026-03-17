@@ -6,6 +6,7 @@ import GroupGrid from "../components/dashboard/GroupGrid";
 import RecentActivityCard from "../components/dashboard/RecentActivityCard";
 import MainContainer from "../components/ui/MainContainer";
 import { dashboardService, DASHBOARD_CACHE_KEY, type DashboardActivity, type DashboardGroup, type OverallBalances } from "../services/dashboardService";
+import { prefetchGroup } from "../services/groupCacheService";
 import { useAuth } from "../hooks/useAuth";
 
 const CACHE_KEY = DASHBOARD_CACHE_KEY;
@@ -41,13 +42,15 @@ const DashboardPage = () => {
 			if (!user) return;
 
 			const groups = await dashboardService.getGroups();
+			const groupExpensesMap = await dashboardService.getGroupExpenses(groups);
+			const allExpenses = Object.values(groupExpensesMap).flat();
 
-			const [balanceData, activityData] = await Promise.all([
-				dashboardService.getOverallBalances(user.id, groups),
-				dashboardService.getRecentActivity(user.id, groups),
-			]);
+			// Pass already-fetched expenses so group prefetch only needs the detail call
+			groups.forEach(g => prefetchGroup(g.id, user.id, groupExpensesMap[g.id]));
 
 			const freshGroups = dashboardService.getUserGroups(groups);
+			const balanceData = dashboardService.getOverallBalances(user.id, groupExpensesMap);
+			const activityData = dashboardService.getRecentActivity(user.id, allExpenses);
 
 			setBalances(balanceData);
 			setUserGroups(freshGroups);

@@ -1,4 +1,5 @@
 import { apiClient } from "../helper/apiClient";
+import type { RawExpense } from "./groupService";
 
 export const DASHBOARD_CACHE_KEY = 'sf_dashboard';
 
@@ -41,169 +42,134 @@ export interface OverallBalances {
 
 export const dashboardService = {
 
-	// SRP: sole job is to fetch raw groups from the API
+	// Fetch the list of groups the user belongs to
 	getGroups: async (): Promise<RawGroup[]> => {
 		try {
 			const response = await apiClient.get('/groups');
 			return response.data.groups ?? [];
 		} catch (error) {
-			console.error("Axios error fetching groups:", error);
+			console.error("Error fetching groups:", error);
 			return [];
 		}
 	},
 
-	// SRP: sole job is to transform raw groups into UI shape (no fetching)
+	// Fetch expenses for all groups in a single parallel batch.
+	// Returns a map of groupId → expenses so callers can work per-group or flat.
+	getGroupExpenses: async (groups: RawGroup[]): Promise<Record<string, RawExpense[]>> => {
+		if (groups.length === 0) return {};
+		const results = await Promise.allSettled(
+			groups.map(g => apiClient.get(`/groups/${g.id}/expenses`))
+		);
+		const map: Record<string, RawExpense[]> = {};
+		results.forEach((res, idx) => {
+			map[groups[idx].id] = res.status === 'fulfilled'
+				? (res.value.data.expenses ?? [])
+				: [];
+		});
+		return map;
+	},
+
+	// Pure transform — no fetching
 	getUserGroups: (groups: RawGroup[]): DashboardGroup[] => {
 		return groups.map((g) => ({
 			id: g.id,
 			name: g.name,
 			category: g.category || 'other',
 			updatedAt: new Date(g.updated_at).toLocaleDateString(),
-			status: 'settled', // You can update this later when you link it to the balances!
+			status: 'settled',
 			amount: '$0.00',
 		}));
 	},
 
-	// SRP: receives groups, fetches expenses, maps to activity UI shape
-	getRecentActivity: async (currentUserId: string, groups: RawGroup[]): Promise<DashboardActivity[]> => {
-		try {
-			if (groups.length === 0) return [];
-
-			const expensePromises = groups.map((g) => apiClient.get(`/groups/${g.id}/expenses`));
-			const expenseResponses = await Promise.allSettled(expensePromises);
-
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			const allExpenses: any[] = [];
-			expenseResponses.forEach((res) => {
-				if (res.status === 'fulfilled' && res.value.data.expenses) {
-					allExpenses.push(...res.value.data.expenses);
-				}
-			});
-
-			allExpenses.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-			const top5Expenses = allExpenses.slice(0, 5);
-
-			return top5Expenses.map(expense => {
-				const isYou = expense.paid_by === currentUserId;
-				const payerName = isYou ? 'You' : expense.payer_name;
-
-				return {
-					key: expense.id,
-					personName: payerName,
-					action: 'added',
-					target: expense.description,
-					time: new Date(expense.created_at).toLocaleDateString(),
-					statusText: isYou
-						? `You lent $${expense.amount.toFixed(2)}`
-						: `${payerName} paid $${expense.amount.toFixed(2)}`,
-					statusColor: isYou ? 'teal' : 'orange'
-				};
-			});
-		} catch (error) {
-			console.error("Axios error fetching activity:", error);
-			return [];
-		}
+	// Pure compute — takes already-fetched flat expenses list, no API calls
+	getRecentActivity: (currentUserId: string, expenses: RawExpense[]): DashboardActivity[] => {
+		const sorted = [...expenses].sort(
+			(a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+		);
+		return sorted.slice(0, 5).map(expense => {
+			const isYou = expense.paid_by === currentUserId;
+			const payerName = isYou ? 'You' : expense.payer_name;
+			return {
+				key: expense.id,
+				personName: payerName,
+				action: 'added',
+				target: expense.description,
+				time: new Date(expense.created_at).toLocaleDateString(),
+				statusText: isYou
+					? `You lent $${expense.amount.toFixed(2)}`
+					: `${payerName} paid $${expense.amount.toFixed(2)}`,
+				statusColor: isYou ? 'teal' : 'orange',
+			};
+		});
 	},
 
-	// SRP: receives groups, fetches balances + expenses, calculates totals
-	getOverallBalances: async (currentUserId: string, groups: RawGroup[]): Promise<OverallBalances> => {
-		const empty = { totalBalance: 0, posBalance: 0, negBalance: 0, monthlyChange: null };
-		try {
-			if (groups.length === 0) return empty;
+	// Pure compute — takes the groupExpensesMap, no API calls
+	getOverallBalances: (currentUserId: string, groupExpensesMap: Record<string, RawExpense[]>): OverallBalances => {
+		let totalBalance = 0, posBalance = 0, negBalance = 0;
+		let currentMonthNet = 0, lastMonthNet = 0;
 
-			// 1. Fetch Balances AND Expenses in parallel for all groups
-			const balancePromises = groups.map((g) => apiClient.get(`/groups/${g.id}/balances`));
-			const expensePromises = groups.map((g) => apiClient.get(`/groups/${g.id}/expenses`));
+		const now = new Date();
+		const currentMonth = now.getMonth(), currentYear = now.getFullYear();
+		const lastMonthDate = new Date(currentYear, currentMonth - 1, 1);
+		const lastMonth = lastMonthDate.getMonth(), lastMonthYear = lastMonthDate.getFullYear();
 
-			const [balanceResponses, expenseResponses] = await Promise.all([
-				Promise.allSettled(balancePromises),
-				Promise.allSettled(expensePromises)
-			]);
+		Object.values(groupExpensesMap).forEach(expenses => {
+			let groupPaid = 0, groupOwes = 0;
 
-			// 2. Calculate All-Time Totals
-			let posBalance = 0; let negBalance = 0; let totalBalance = 0;
+			expenses.forEach(expense => {
+				if (expense.paid_by === currentUserId) groupPaid += expense.amount;
+				const myParticipant = expense.participants.find(p => p.user_id === currentUserId);
+				if (myParticipant) groupOwes += myParticipant.share;
 
-			balanceResponses.forEach((res) => {
-				if (res.status === 'fulfilled' && res.value.data.balances) {
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					const yourBalance = res.value.data.balances.find((b: any) => b.userId === currentUserId);
-					if (yourBalance) {
-						const net = yourBalance.netBalance;
-						totalBalance += net;
-						if (net > 0) posBalance += net;
-						if (net < 0) negBalance += Math.abs(net);
-					}
+				// Monthly change computation
+				const expDate = new Date(expense.date || expense.created_at);
+				const isCurrentMonth = expDate.getMonth() === currentMonth && expDate.getFullYear() === currentYear;
+				const isLastMonth = expDate.getMonth() === lastMonth && expDate.getFullYear() === lastMonthYear;
+
+				if (isCurrentMonth || isLastMonth) {
+					const paidAmount = expense.paid_by === currentUserId ? expense.amount : 0;
+					const share = myParticipant?.share ?? 0;
+					const net = paidAmount - share;
+					if (isCurrentMonth) currentMonthNet += net;
+					else lastMonthNet += net;
 				}
 			});
 
-			// 3. Calculate Month-Over-Month Change
-			let currentMonthNet = 0;
-			let lastMonthNet = 0;
+			const groupNet = parseFloat((groupPaid - groupOwes).toFixed(2));
+			totalBalance += groupNet;
+			if (groupNet > 0) posBalance += groupNet;
+			if (groupNet < 0) negBalance += Math.abs(groupNet);
+		});
 
-			const now = new Date();
-			const currentMonth = now.getMonth();
-			const currentYear = now.getFullYear();
-
-			const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-			const lastMonth = lastMonthDate.getMonth();
-			const lastMonthYear = lastMonthDate.getFullYear();
-
-			expenseResponses.forEach((res) => {
-				if (res.status === 'fulfilled' && res.value.data.expenses) {
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					res.value.data.expenses.forEach((expense: any) => {
-						const expenseDate = new Date(expense.date || expense.created_at);
-
-						const isCurrentMonth = expenseDate.getMonth() === currentMonth && expenseDate.getFullYear() === currentYear;
-						const isLastMonth = expenseDate.getMonth() === lastMonth && expenseDate.getFullYear() === lastMonthYear;
-
-						if (isCurrentMonth || isLastMonth) {
-							const isPayer = expense.paid_by === currentUserId;
-							const paidAmount = isPayer ? expense.amount : 0;
-
-							// eslint-disable-next-line @typescript-eslint/no-explicit-any
-							const myParticipantRecord = expense.participants.find((p: any) => p.user_id === currentUserId);
-							const myShare = myParticipantRecord ? myParticipantRecord.share : 0;
-
-							const netContribution = paidAmount - myShare;
-
-							if (isCurrentMonth) currentMonthNet += netContribution;
-							if (isLastMonth) lastMonthNet += netContribution;
-						}
-					});
-				}
-			});
-
-			let monthlyChange: number | null = null;
-			if (lastMonthNet !== 0) {
-				monthlyChange = ((currentMonthNet - lastMonthNet) / Math.abs(lastMonthNet)) * 100;
-			} else if (currentMonthNet !== 0 && lastMonthNet === 0) {
-				monthlyChange = 100;
-			}
-
-			return { totalBalance, posBalance, negBalance, monthlyChange };
-		} catch (error) {
-			console.error("Axios error fetching balances:", error);
-			return empty;
+		let monthlyChange: number | null = null;
+		if (lastMonthNet !== 0) {
+			monthlyChange = ((currentMonthNet - lastMonthNet) / Math.abs(lastMonthNet)) * 100;
+		} else if (currentMonthNet !== 0) {
+			monthlyChange = 100;
 		}
-	}
+
+		return {
+			totalBalance: parseFloat(totalBalance.toFixed(2)),
+			posBalance: parseFloat(posBalance.toFixed(2)),
+			negBalance: parseFloat(negBalance.toFixed(2)),
+			monthlyChange,
+		};
+	},
 };
 
 // ── Prefetch ──────────────────────────────────────────────────────────────────
 
-// Fetches all dashboard data and writes it to sessionStorage.
-// No-op if cache already exists. Safe to call multiple times.
 export const prefetchDashboard = (userId: string): void => {
 	if (sessionStorage.getItem(DASHBOARD_CACHE_KEY)) return;
 
 	dashboardService.getGroups()
 		.then(async (groups) => {
 			if (groups.length === 0) return;
-			const [balanceData, activityData] = await Promise.all([
-				dashboardService.getOverallBalances(userId, groups),
-				dashboardService.getRecentActivity(userId, groups),
-			]);
+			const groupExpensesMap = await dashboardService.getGroupExpenses(groups);
+			const allExpenses = Object.values(groupExpensesMap).flat();
 			const userGroups = dashboardService.getUserGroups(groups);
+			const balanceData = dashboardService.getOverallBalances(userId, groupExpensesMap);
+			const activityData = dashboardService.getRecentActivity(userId, allExpenses);
 			sessionStorage.setItem(DASHBOARD_CACHE_KEY, JSON.stringify({
 				balances: balanceData,
 				userGroups,
@@ -214,8 +180,6 @@ export const prefetchDashboard = (userId: string): void => {
 };
 
 // Auto-start: fires as soon as this module loads (at app startup).
-// At that point localStorage already has the session, so the fetch races
-// ahead of React rendering and may be complete by the time DashboardPage mounts.
 try {
 	const userRaw = localStorage.getItem('sf_user');
 	if (userRaw) prefetchDashboard(JSON.parse(userRaw).id);
