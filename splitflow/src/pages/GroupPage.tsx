@@ -8,21 +8,9 @@ import OptimizationEngineCard from "../components/group/OptimizationEngineCard";
 import Header from "../components/navigation/Header";
 import Sidebar from "../components/navigation/Sidebar";
 import MainContainer from "../components/ui/MainContainer";
-import groupService from '../services/groupService';
-import type { TransactionGroup, TransactionCategory } from '../types/Transaction';
+import { buildGroupCache, loadGroupCache, saveGroupCache } from '../services/groupCacheService';
+import type { TransactionGroup } from '../types/Transaction';
 import type { DebtSettlement } from '../types/Debt';
-
-const VALID_CATEGORIES: TransactionCategory[] = ['food', 'transport', 'accommodation', 'shopping', 'entertainment', 'utilities', 'other'];
-
-const mapCategory = (cat: string | null): TransactionCategory =>
-  VALID_CATEGORIES.includes(cat as TransactionCategory) ? (cat as TransactionCategory) : 'other';
-
-const formatDateLabel = (dateStr: string): string => {
-  const [year, month, day] = dateStr.split('-').map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString('en-US', {
-    month: 'long', day: 'numeric', year: 'numeric',
-  });
-};
 
 const getCurrentUserId = (): string => {
   try { return JSON.parse(localStorage.getItem('sf_user') || '{}').id ?? ''; }
@@ -31,97 +19,29 @@ const getCurrentUserId = (): string => {
 
 const GroupPage = () => {
   const { id: groupId } = useParams<{ id: string }>();
-  const [groupName, setGroupName] = useState('');
-  const [category, setCategory] = useState('other');
-  const [membersCount, setMembersCount] = useState(0);
-  const [balance, setBalance] = useState(0);
-  const [transactionGroups, setTransactionGroups] = useState<TransactionGroup[]>([]);
-  const [settlements, setSettlements] = useState<DebtSettlement[]>([]);
+
+  const cached = groupId ? loadGroupCache(groupId) : null;
+
+  const [groupName, setGroupName] = useState(cached?.groupName ?? '');
+  const [category, setCategory] = useState(cached?.category ?? 'other');
+  const [membersCount, setMembersCount] = useState(cached?.membersCount ?? 0);
+  const [balance, setBalance] = useState(cached?.balance ?? 0);
+  const [transactionGroups, setTransactionGroups] = useState<TransactionGroup[]>(cached?.transactionGroups ?? []);
+  const [settlements, setSettlements] = useState<DebtSettlement[]>(cached?.settlements ?? []);
 
   useEffect(() => {
     if (!groupId) return;
     const currentUserId = getCurrentUserId();
 
-    const fetchAll = async () => {
-      const [groupRes, expensesRes, balancesRes, settlementsRes] = await Promise.allSettled([
-        groupService.getGroupById(groupId),
-        groupService.getGroupExpenses(groupId),
-        groupService.getGroupBalances(groupId),
-        groupService.getSettlementSuggestions(groupId),
-      ]);
-
-      if (groupRes.status === 'fulfilled') {
-        const g = groupRes.value;
-        setGroupName(g.name);
-        setCategory(g.category || 'other');
-        setMembersCount(g.members.length);
-      }
-
-      if (expensesRes.status === 'fulfilled') {
-        const expenses = expensesRes.value;
-        const byDate: Record<string, typeof expenses> = {};
-        expenses.forEach(exp => {
-          if (!byDate[exp.date]) byDate[exp.date] = [];
-          byDate[exp.date].push(exp);
-        });
-
-        const groups: TransactionGroup[] = Object.entries(byDate)
-          .sort(([a], [b]) => b.localeCompare(a))
-          .map(([date, exps]) => ({
-            dateLabel: formatDateLabel(date),
-            dailyTotal: exps.reduce((sum, e) => sum + e.amount, 0),
-            transactions: exps.map(exp => {
-              const participant = exp.participants.find(p => p.user_id === currentUserId);
-              const isPayer = exp.paid_by === currentUserId;
-              let userNetChange = 0;
-              let userStatus: 'you owe' | 'you lent' | 'not involved' = 'not involved';
-
-              if (participant) {
-                if (isPayer) {
-                  userNetChange = exp.amount - participant.share;
-                  userStatus = 'you lent';
-                } else {
-                  userNetChange = -participant.share;
-                  userStatus = 'you owe';
-                }
-              }
-
-              return {
-                id: exp.id,
-                title: exp.description,
-                category: mapCategory(exp.category),
-                paidBy: exp.payer_name,
-                totalAmount: exp.amount,
-                splitDetails: `Split ${exp.participants_count} ways`,
-                userNetChange,
-                userStatus,
-              };
-            }),
-          }));
-
-        setTransactionGroups(groups);
-      }
-
-      if (balancesRes.status === 'fulfilled') {
-        const userBalance = balancesRes.value.find(b => b.userId === currentUserId);
-        setBalance(userBalance?.netBalance ?? 0);
-      }
-
-      if (settlementsRes.status === 'fulfilled') {
-        const mapped: DebtSettlement[] = settlementsRes.value
-          .filter(s => s.from === currentUserId || s.to === currentUserId)
-          .map((s, idx) => ({
-            id: String(idx),
-            debtorName: s.from_name,
-            creditorName: s.to_name,
-            amount: s.amount,
-            type: s.from === currentUserId ? 'you-owe' : 'owes-you',
-          }));
-        setSettlements(mapped);
-      }
-    };
-
-    fetchAll();
+    buildGroupCache(groupId, currentUserId).then(fresh => {
+      setGroupName(fresh.groupName);
+      setCategory(fresh.category);
+      setMembersCount(fresh.membersCount);
+      setBalance(fresh.balance);
+      setTransactionGroups(fresh.transactionGroups);
+      setSettlements(fresh.settlements);
+      saveGroupCache(groupId, fresh);
+    });
   }, [groupId]);
 
   return (
