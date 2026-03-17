@@ -3,22 +3,21 @@ import Card from "../ui/Card";
 import { TagIcon } from "@heroicons/react/24/outline";
 import Button from "../ui/Button";
 import type { ReactNode } from "react";
+import { Link } from "react-router-dom";
 
 interface GroupCardType {
+	id: string;
 	icon?: ReactNode;
 	iconBgClass?: string;
 	status: 'owed' | 'owe' | 'settled';
-  amount?: string | null;
-
+	amount?: string | null;
 	title: string;
-	key: string;
 	lastActivity?: string;
 	category?: string;
-
 }
 
 
-const GroupCard = ({title, lastActivity, icon, iconBgClass, status, amount }: GroupCardType) => {
+const GroupCard = ({ id, title, lastActivity, icon, iconBgClass, status, amount }: GroupCardType) => {
 
 	const getBadgeStyle = () => {
 		switch (status) {
@@ -30,40 +29,41 @@ const GroupCard = ({title, lastActivity, icon, iconBgClass, status, amount }: Gr
 
 	const badge = getBadgeStyle();
 	return (
+		<Link to={`/group/${id}`} className="block h-full">
+			<Card className="flex flex-col justify-between h-full hover:shadow-md transition-shadow cursor-pointer">
 
-		<Card className="flex flex-col justify-between h-full hover:shadow-md transition-shadow cursor-pointer">
-      
-      {/* Top Row: Icon & Badge */}
-			<div className="flex justify-between items-start mb-4">
-				<div className={`w-10 h-10 rounded-xl flex items-center justify-center ${iconBgClass} [&>svg]:w-5 [&>svg]:h-5`}>
-					{icon ? icon : <TagIcon/>}
+				{/* Top Row: Icon & Badge */}
+				<div className="flex justify-between items-start mb-4">
+					<div className={`w-10 h-10 rounded-xl flex items-center justify-center ${iconBgClass} [&>svg]:w-5 [&>svg]:h-5`}>
+						{icon ? icon : <TagIcon/>}
+					</div>
+					{badge &&
+					<div className={`${badge.bg} ${badge.text} text-[10px] font-bold px-2.5 py-1 rounded-full tracking-wide`}>
+						{badge.label}
+					</div>}
 				</div>
-				{badge && 
-				<div className={`${badge.bg} ${badge.text} text-[10px] font-bold px-2.5 py-1 rounded-full tracking-wide`}>
-					{badge.label}
-				</div>}
-      </div>
 
-      {/* Middle Row: Text Content */}
-      <div className="mb-6">
-        <h3 className="text-base font-bold sm:text-left text-slate-900">{title}</h3>
-        <p className="text-xs text-slate-500 sm:text-left mt-1">Last activity: {lastActivity}</p>
-      </div>
+				{/* Middle Row: Text Content */}
+				<div className="mb-6">
+					<h3 className="text-base font-bold sm:text-left text-slate-900">{title}</h3>
+					<p className="text-xs text-slate-500 sm:text-left mt-1">Last activity: {lastActivity}</p>
+				</div>
 
-      {/* Bottom Row: Avatars & Arrow */}
-      <div className="flex justify-between items-center mt-auto">
-        <div className="flex items-center -space-x-2">
-          {/* Mock Avatars */}
-          <div className="w-6 h-6 rounded-full border-2 border-white bg-slate-200 z-30"></div>
-          <div className="w-6 h-6 rounded-full border-2 border-white bg-slate-300 z-20"></div>
-          <div className="w-6 h-6 rounded-full border-2 border-white bg-teal-100 z-10"></div>
-        </div>
-				<Button variant="outline" onClick={() => console.log("Clicked on: ", name)}>
-        <ArrowRightIcon className="w-4 h-4 text-slate-300" />
-				</Button>
-      </div>
+				{/* Bottom Row: Avatars & Arrow */}
+				<div className="flex justify-between items-center mt-auto">
+					<div className="flex items-center -space-x-2">
+						{/* Mock Avatars */}
+						<div className="w-6 h-6 rounded-full border-2 border-white bg-slate-200 z-30"></div>
+						<div className="w-6 h-6 rounded-full border-2 border-white bg-slate-300 z-20"></div>
+						<div className="w-6 h-6 rounded-full border-2 border-white bg-teal-100 z-10"></div>
+					</div>
+					<Button variant="outline">
+						<ArrowRightIcon className="w-4 h-4 text-slate-300" />
+					</Button>
+				</div>
 
-    </Card>
+			</Card>
+		</Link>
 	);
 };
 

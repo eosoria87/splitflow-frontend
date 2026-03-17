@@ -41,6 +41,7 @@ const GroupGrid = ({ groups }: Props) => {
           return (
             <GroupCard
               key={group.id}
+              id={group.id}
               title={group.name}
               lastActivity={group.updatedAt}
               icon={meta.icon}
