@@ -50,6 +50,7 @@ const DashboardPage = () => {
 
 			const freshGroups = dashboardService.getUserGroups(groups);
 			const balanceData = dashboardService.getOverallBalances(user.id, groupExpensesMap);
+			console.log('balanceData', balanceData)
 			const activityData = dashboardService.getRecentActivity(user.id, allExpenses);
 
 			setBalances(balanceData);

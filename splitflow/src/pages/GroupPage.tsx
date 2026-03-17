@@ -30,11 +30,8 @@ const GroupPage = () => {
   const [transactionGroups, setTransactionGroups] = useState<TransactionGroup[]>(cached?.transactionGroups ?? []);
   const [settlements, setSettlements] = useState<DebtSettlement[]>(cached?.settlements ?? []);
 
-  useEffect(() => {
-    if (!groupId) return;
-    const currentUserId = getCurrentUserId();
-
-    buildGroupCache(groupId, currentUserId).then(fresh => {
+  const refresh = (id: string) => {
+    buildGroupCache(id, getCurrentUserId()).then(fresh => {
       setGroupName(fresh.groupName);
       setCategory(fresh.category);
       setMembersCount(fresh.membersCount);
@@ -42,8 +39,22 @@ const GroupPage = () => {
       setBalance(fresh.balance);
       setTransactionGroups(fresh.transactionGroups);
       setSettlements(fresh.settlements);
-      saveGroupCache(groupId, fresh);
+      saveGroupCache(id, fresh);
     });
+  };
+
+  useEffect(() => {
+    if (!groupId) return;
+    refresh(groupId);
+  }, [groupId]);
+
+  useEffect(() => {
+    if (!groupId) return;
+    const handler = (e: Event) => {
+      if ((e as CustomEvent).detail?.groupId === groupId) refresh(groupId);
+    };
+    window.addEventListener('expense-added', handler);
+    return () => window.removeEventListener('expense-added', handler);
   }, [groupId]);
 
   return (
