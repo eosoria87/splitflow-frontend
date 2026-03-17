@@ -7,6 +7,7 @@ export interface GroupCache {
   groupName: string;
   category: string;
   membersCount: number;
+  memberNames: string[];
   balance: number;
   transactionGroups: TransactionGroup[];
   settlements: DebtSettlement[];
@@ -117,6 +118,7 @@ export const buildGroupCache = async (
     groupName: '',
     category: 'other',
     membersCount: 0,
+    memberNames: [],
     balance: 0,
     transactionGroups: [],
     settlements: [],
@@ -130,6 +132,7 @@ export const buildGroupCache = async (
     cache.groupName = g.name;
     cache.category = g.category || 'other';
     cache.membersCount = g.members.length;
+    cache.memberNames = g.members.map(m => m.name);
   }
 
   if (expensesRes.status === 'fulfilled') {

@@ -25,6 +25,7 @@ const GroupPage = () => {
   const [groupName, setGroupName] = useState(cached?.groupName ?? '');
   const [category, setCategory] = useState(cached?.category ?? 'other');
   const [membersCount, setMembersCount] = useState(cached?.membersCount ?? 0);
+  const [memberNames, setMemberNames] = useState<string[]>(cached?.memberNames ?? []);
   const [balance, setBalance] = useState(cached?.balance ?? 0);
   const [transactionGroups, setTransactionGroups] = useState<TransactionGroup[]>(cached?.transactionGroups ?? []);
   const [settlements, setSettlements] = useState<DebtSettlement[]>(cached?.settlements ?? []);
@@ -37,6 +38,7 @@ const GroupPage = () => {
       setGroupName(fresh.groupName);
       setCategory(fresh.category);
       setMembersCount(fresh.membersCount);
+      setMemberNames(fresh.memberNames);
       setBalance(fresh.balance);
       setTransactionGroups(fresh.transactionGroups);
       setSettlements(fresh.settlements);
@@ -56,6 +58,7 @@ const GroupPage = () => {
           category={category}
           membersCount={membersCount}
           memberAvatars={[]}
+          memberNames={memberNames}
         />
         <MainContainer columnsNum={3}>
           <div className="xl:col-span-2 flex flex-col gap-4">
