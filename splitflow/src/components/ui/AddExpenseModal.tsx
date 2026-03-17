@@ -121,10 +121,9 @@ const AddExpenseModal = ({ isOpen, onClose }: Props) => {
 									<CalendarIcon className="w-5 h-5" />
 								</div>
 								<input
-									type="text"
+									type="date"
 									value={date}
 									onChange={(e) => setDate(e.target.value)}
-									defaultValue="10/27/2023"
 									className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-colors"
 								/>
 							</div>
@@ -195,7 +194,7 @@ const AddExpenseModal = ({ isOpen, onClose }: Props) => {
 							</div>
 
 							{/* User 2 (Inactive) */}
-							<div className="flex items-center justify-between p-2 hover:bg-white rounded-lg transition-colors cursor-pointer opacity-60 grayscale-[50%]">
+							<div className="flex items-center justify-between p-2 hover:bg-white rounded-lg transition-colors cursor-pointer opacity-60 grayscale-50">
 								<div className="flex items-center gap-3">
 									<img src="https://i.pravatar.cc/150?img=5" alt="Sarah" className="w-10 h-10 rounded-full" />
 									<div>
