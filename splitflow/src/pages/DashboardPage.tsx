@@ -48,7 +48,7 @@ const DashboardPage = () => {
 			// Pass already-fetched expenses so group prefetch only needs the detail call
 			groups.forEach(g => prefetchGroup(g.id, user.id, groupExpensesMap[g.id]));
 
-			const freshGroups = dashboardService.getUserGroups(groups);
+			const freshGroups = dashboardService.getUserGroups(groups, groupExpensesMap);
 			const balanceData = dashboardService.getOverallBalances(user.id, groupExpensesMap);
 			const activityData = dashboardService.getRecentActivity(user.id, allExpenses);
 

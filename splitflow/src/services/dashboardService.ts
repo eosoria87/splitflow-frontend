@@ -1,5 +1,6 @@
 import { apiClient } from "../helper/apiClient";
 import type { RawExpense } from "./groupService";
+import formatRelativeTime from "../helper/formatRelativeTime";
 
 export const DASHBOARD_CACHE_KEY = 'sf_dashboard';
 
@@ -70,15 +71,21 @@ export const dashboardService = {
 	},
 
 	// Pure transform — no fetching
-	getUserGroups: (groups: RawGroup[]): DashboardGroup[] => {
-		return groups.map((g) => ({
-			id: g.id,
-			name: g.name,
-			category: g.category || 'other',
-			updatedAt: new Date(g.updated_at).toLocaleDateString(),
-			status: 'settled',
-			amount: '$0.00',
-		}));
+	getUserGroups: (groups: RawGroup[], groupExpensesMap: Record<string, RawExpense[]> = {}): DashboardGroup[] => {
+		return groups.map((g) => {
+			const expenses = groupExpensesMap[g.id] ?? [];
+			const latestDate = expenses.length > 0
+				? expenses.reduce((latest, exp) => exp.created_at > latest ? exp.created_at : latest, expenses[0].created_at)
+				: g.updated_at;
+			return {
+				id: g.id,
+				name: g.name,
+				category: g.category || 'other',
+				updatedAt: formatRelativeTime(latestDate),
+				status: 'settled',
+				amount: '$0.00',
+			};
+		});
 	},
 
 	// Pure compute — takes already-fetched flat expenses list, no API calls
@@ -176,7 +183,7 @@ export const prefetchDashboard = (userId: string): void => {
 			if (groups.length === 0) return;
 			const groupExpensesMap = await dashboardService.getGroupExpenses(groups);
 			const allExpenses = Object.values(groupExpensesMap).flat();
-			const userGroups = dashboardService.getUserGroups(groups);
+			const userGroups = dashboardService.getUserGroups(groups, groupExpensesMap);
 			const balanceData = dashboardService.getOverallBalances(userId, groupExpensesMap);
 			const activityData = dashboardService.getRecentActivity(userId, allExpenses);
 			sessionStorage.setItem(DASHBOARD_CACHE_KEY, JSON.stringify({
