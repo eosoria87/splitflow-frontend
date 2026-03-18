@@ -1,4 +1,5 @@
 export type TransactionCategory = 'food' | 'transport' | 'accommodation' | 'shopping' | 'entertainment' | 'utilities' | 'other';
+export type GroupCategory = 'travel' | 'home' | 'couple' | 'friends' | 'other';
 export type TransactionStatus = 'you owe' | 'you lent' | 'not involved';
 
 export interface GroupTransaction {

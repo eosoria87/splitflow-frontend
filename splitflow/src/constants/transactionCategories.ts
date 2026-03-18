@@ -1,5 +1,5 @@
-import { BoltIcon, CakeIcon, HomeModernIcon, MusicalNoteIcon, ShoppingBagIcon, TagIcon, TruckIcon } from "@heroicons/react/24/outline";
-import type { TransactionCategory } from "../types/Transaction";
+import { BoltIcon, CakeIcon, HeartIcon, HomeModernIcon, MusicalNoteIcon, ShoppingBagIcon, TagIcon, TruckIcon, UserGroupIcon } from "@heroicons/react/24/outline";
+import type { GroupCategory, TransactionCategory } from "../types/Transaction";
 
 export const categoryConfig: Record<TransactionCategory, { icon: React.ElementType, color: string, name: string}> = {
 	food: { icon: CakeIcon, color: "bg-teal-50 text-teal-500", name:'Food' },
@@ -8,5 +8,13 @@ export const categoryConfig: Record<TransactionCategory, { icon: React.ElementTy
 	shopping: { icon: ShoppingBagIcon, color: "bg-pink-50 text-pink-500", name: 'Shopping' },
 	entertainment: { icon: MusicalNoteIcon, color: "bg-indigo-50 text-indigo-500", name: 'Entertainment' },
 	utilities: { icon: BoltIcon, color: "bg-yellow-50 text-yellow-500", name: 'Utilities' },
+	other: { icon: TagIcon, color: "bg-slate-100 text-slate-500", name: 'Other' },
+};
+
+export const groupCategoryConfig: Record<GroupCategory, { icon: React.ElementType, color: string, name: string }> = {
+	travel: { icon: TruckIcon, color: "bg-blue-50 text-blue-500", name: 'Travel' },
+	home: { icon: HomeModernIcon, color: "bg-purple-50 text-purple-500", name: 'Home' },
+	couple: { icon: HeartIcon, color: "bg-pink-50 text-pink-500", name: 'Couple' },
+	friends: { icon: UserGroupIcon, color: "bg-indigo-50 text-indigo-500", name: 'Friends' },
 	other: { icon: TagIcon, color: "bg-slate-100 text-slate-500", name: 'Other' },
 };
