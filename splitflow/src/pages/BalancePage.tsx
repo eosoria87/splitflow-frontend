@@ -1,9 +1,9 @@
-import Sidebar from "../components/navigation/Sidebar";
-import Header from "../components/navigation/Header";
+import Sidebar from "../components/layout/Sidebar";
+import Header from "../components/layout/Header";
 import { useState } from "react";
-import BalanceCard from "../components/balance/BalanceCard";
+import BalanceCard from "../components/ui/BalanceCard";
 import MainContainer from "../components/ui/MainContainer";
-import RecoveredProgress from "../components/balance/RecoveredProgress";
+import RecoveredProgress from "../components/ui/RecoveredProgress";
 
 
 const BalancePage = () => {
@@ -21,7 +21,7 @@ const BalancePage = () => {
 				<Header title="" />
 
 				{/* --- THE CORE GRID --- */}
-				<div className="xl:pl-64 sm:px-8 pb-12  gap-8 ">
+				<div className="px-4 sm:px-8 pb-12 gap-8">
 					{/* --- HERO SECTION --- */}
 					<header className="text-center space-y-4">
 						<p className="text-[10px] uppercase tracking-widest font-medium text-accent">Your Net Position</p>

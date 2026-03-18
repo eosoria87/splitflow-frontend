@@ -5,7 +5,7 @@ import SlideOne from "../components/onboarding/SlideOne";
 import SlideTwo from "../components/onboarding/SlideTwo";
 import SlideThree from "../components/onboarding/SlideThree";
 import Button from "../components/ui/Button";
-import NavBarOnboarding from "../components/navigation/NavBarOnboarding";
+import NavBarOnboarding from "../components/layout/NavBarOnboarding";
 
 
 const OnboardingPage = () => {

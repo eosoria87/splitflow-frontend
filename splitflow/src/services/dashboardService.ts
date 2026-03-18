@@ -1,5 +1,6 @@
-import { apiClient } from "../helper/apiClient";
+import { apiClient } from "../utils/apiClient";
 import type { RawExpense } from "./groupService";
+import formatRelativeTime from "../utils/formatRelativeTime";
 
 export const DASHBOARD_CACHE_KEY = 'sf_dashboard';
 
@@ -70,15 +71,21 @@ export const dashboardService = {
 	},
 
 	// Pure transform — no fetching
-	getUserGroups: (groups: RawGroup[]): DashboardGroup[] => {
-		return groups.map((g) => ({
-			id: g.id,
-			name: g.name,
-			category: g.category || 'other',
-			updatedAt: new Date(g.updated_at).toLocaleDateString(),
-			status: 'settled',
-			amount: '$0.00',
-		}));
+	getUserGroups: (groups: RawGroup[], groupExpensesMap: Record<string, RawExpense[]> = {}): DashboardGroup[] => {
+		return groups.map((g) => {
+			const expenses = groupExpensesMap[g.id] ?? [];
+			const latestDate = expenses.length > 0
+				? expenses.reduce((latest, exp) => exp.created_at > latest ? exp.created_at : latest, expenses[0].created_at)
+				: g.updated_at;
+			return {
+				id: g.id,
+				name: g.name,
+				category: g.category || 'other',
+				updatedAt: formatRelativeTime(latestDate),
+				status: 'settled',
+				amount: '$0.00',
+			};
+		});
 	},
 
 	// Pure compute — takes already-fetched flat expenses list, no API calls
@@ -122,9 +129,12 @@ export const dashboardService = {
 				if (myParticipant) groupOwes += myParticipant.share;
 
 				// Monthly change computation
-				const expDate = new Date(expense.date || expense.created_at);
-				const isCurrentMonth = expDate.getMonth() === currentMonth && expDate.getFullYear() === currentYear;
-				const isLastMonth = expDate.getMonth() === lastMonth && expDate.getFullYear() === lastMonthYear;
+				// Use the date string directly to avoid UTC-midnight parsing shifting
+				// "2026-03-01" into Feb 28 in UTC- timezones.
+				const rawDate = (expense.date || expense.created_at).substring(0, 10);
+				const [expYear, expMonth] = rawDate.split('-').map(Number);
+				const isCurrentMonth = expMonth - 1 === currentMonth && expYear === currentYear;
+				const isLastMonth = expMonth - 1 === lastMonth && expYear === lastMonthYear;
 
 				if (isCurrentMonth || isLastMonth) {
 					const paidAmount = expense.paid_by === currentUserId ? expense.amount : 0;
@@ -141,10 +151,16 @@ export const dashboardService = {
 			if (groupNet < 0) negBalance += Math.abs(groupNet);
 		});
 
+		// Only compute a percentage when last month had at least $1 of activity.
+		// Sub-dollar denominators produce misleading 10,000%+ swings.
+		const MIN_THRESHOLD = 1;
 		let monthlyChange: number | null = null;
-		if (lastMonthNet !== 0) {
-			monthlyChange = ((currentMonthNet - lastMonthNet) / Math.abs(lastMonthNet)) * 100;
-		} else if (currentMonthNet !== 0) {
+		if (Math.abs(lastMonthNet) >= MIN_THRESHOLD) {
+			const raw = ((currentMonthNet - lastMonthNet) / Math.abs(lastMonthNet)) * 100;
+			// Cap at ±999 so the UI never shows absurd values like +19900%
+			monthlyChange = parseFloat(Math.max(-999, Math.min(999, raw)).toFixed(1));
+		} else if (Math.abs(currentMonthNet) >= MIN_THRESHOLD) {
+			// Nothing last month but activity this month → treat as a full increase
 			monthlyChange = 100;
 		}
 
@@ -167,7 +183,7 @@ export const prefetchDashboard = (userId: string): void => {
 			if (groups.length === 0) return;
 			const groupExpensesMap = await dashboardService.getGroupExpenses(groups);
 			const allExpenses = Object.values(groupExpensesMap).flat();
-			const userGroups = dashboardService.getUserGroups(groups);
+			const userGroups = dashboardService.getUserGroups(groups, groupExpensesMap);
 			const balanceData = dashboardService.getOverallBalances(userId, groupExpensesMap);
 			const activityData = dashboardService.getRecentActivity(userId, allExpenses);
 			sessionStorage.setItem(DASHBOARD_CACHE_KEY, JSON.stringify({

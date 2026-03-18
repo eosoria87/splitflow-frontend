@@ -1,36 +1,81 @@
-import { ArrowsRightLeftIcon, CalendarIcon, CheckIcon, ChevronDownIcon, PencilIcon, Squares2X2Icon, XMarkIcon } from "@heroicons/react/24/solid";
+import { CalendarIcon, CheckIcon, PencilIcon, Squares2X2Icon, XMarkIcon } from "@heroicons/react/24/solid";
+// CheckIcon is used in the Save button; Squares2X2Icon is passed as icon prop to Dropdown
 import Button from "./Button";
+import Dropdown from "./Dropdown";
 import { useState } from "react";
+import { useParams } from "react-router-dom";
+import { apiClient } from "../../utils/apiClient";
+
+const CATEGORIES: { value: string; label: string }[] = [
+	{ value: "food", label: "Food & Dining" },
+	{ value: "transport", label: "Transport" },
+	{ value: "accommodation", label: "Accommodation" },
+	{ value: "entertainment", label: "Entertainment" },
+	{ value: "utilities", label: "Utilities" },
+	{ value: "other", label: "Other" },
+];
 
 interface Props {
 	isOpen: boolean;
 	onClose: () => void;
 }
 
-const AddExpenseModal = ({ isOpen, onClose }: Props) => {
+const today = new Date().toISOString().split('T')[0];
 
-	const [splitMethod, setSplitMethod] = useState<'Equally' | 'Percentage' | 'Exact'>('Equally');
+const getCurrentUserName = (): string => {
+	try { return JSON.parse(localStorage.getItem('sf_user') || '{}').name ?? 'You'; }
+	catch { return 'You'; }
+};
+
+const AddExpenseModal = ({ isOpen, onClose }: Props) => {
+	const { id: groupId } = useParams<{ id: string }>();
+	const currentUserName = getCurrentUserName();
+
 	const [amount, setAmount] = useState<string>("");
 	const [description, setDescription] = useState<string>("");
-	const [date, setDate] = useState<string>("2023-10-27");
+	const [date, setDate] = useState<string>(today);
+	const [category, setCategory] = useState<string>("food");
+	const [isLoading, setIsLoading] = useState(false);
+	const [error, setError] = useState<string | null>(null);
+
+	const isFormValid =
+		description.trim() !== '' &&
+		!!amount && !isNaN(parseFloat(amount)) && parseFloat(amount) > 0 &&
+		date !== '' &&
+		category !== '-';
 
 	const resetForm = () => {
 		setAmount("");
 		setDescription("");
-		setDate("2023-10-27");
-		setSplitMethod('Equally');
+		setDate(today);
+		setCategory("food");
+		setError(null);
 	};
-	const handleSave = () => {
-		const expenseData = {
-			amount: parseFloat(amount),
-			description,
-			date,
-			splitMethod,
-		};
-		console.log("Saving Data:", expenseData);
-		resetForm();
-		onClose();
-	}
+	const handleSave = async () => {
+		if (!groupId) return;
+		if (!description.trim()) { setError('Description is required.'); return; }
+		if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) { setError('Enter a valid amount.'); return; }
+
+		setError(null);
+		setIsLoading(true);
+		try {
+			await apiClient.post(`/groups/${groupId}/expenses`, {
+				description: description.trim(),
+				amount: parseFloat(amount),
+				date,
+				category,
+			});
+			sessionStorage.removeItem(`sf_group_${groupId}`);
+			window.dispatchEvent(new CustomEvent('expense-added', { detail: { groupId } }));
+			resetForm();
+			onClose();
+		} catch (err: unknown) {
+			const message = err instanceof Error ? err.message : 'Failed to save expense. Please try again.';
+			setError(message);
+		} finally {
+			setIsLoading(false);
+		}
+	};
 	const handleClose = () => {
 		resetForm(); 
 		onClose();  
@@ -59,7 +104,7 @@ const AddExpenseModal = ({ isOpen, onClose }: Props) => {
 				</div>
 
 
-				<div className="p-6 overflow-y-auto flex-1 space-y-8">
+				<div className="p-6 overflow-y-auto flex-1 space-y-8 text-left">
 
 					<div className="flex flex-col items-center">
 						<label className="text-xs font-bold text-teal-500 tracking-wider uppercase mb-2">
@@ -77,7 +122,7 @@ const AddExpenseModal = ({ isOpen, onClose }: Props) => {
 						</div>
 					</div>
 
-					<div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+					<div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-left">
 
 						{/* Description */}
 						<div>
@@ -99,18 +144,12 @@ const AddExpenseModal = ({ isOpen, onClose }: Props) => {
 						{/* Category */}
 						<div>
 							<label className="block text-sm font-medium text-slate-700 mb-1.5">Category</label>
-							<div className="relative cursor-pointer group">
-								<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-									<Squares2X2Icon className="w-5 h-5" />
-								</div>
-								{/* We use a div styled like an input here since it's likely a custom dropdown in reality */}
-								<div className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 group-hover:bg-white transition-colors flex items-center justify-between">
-									<span>Food & Dining</span>
-								</div>
-								<div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
-									<ChevronDownIcon className="w-4 h-4" />
-								</div>
-							</div>
+							<Dropdown
+								options={CATEGORIES}
+								value={category}
+								onChange={setCategory}
+								icon={<Squares2X2Icon className="w-5 h-5" />}
+							/>
 						</div>
 
 						{/* Date */}
@@ -121,10 +160,9 @@ const AddExpenseModal = ({ isOpen, onClose }: Props) => {
 									<CalendarIcon className="w-5 h-5" />
 								</div>
 								<input
-									type="text"
+									type="date"
 									value={date}
 									onChange={(e) => setDate(e.target.value)}
-									defaultValue="10/27/2023"
 									className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-colors"
 								/>
 							</div>
@@ -133,95 +171,45 @@ const AddExpenseModal = ({ isOpen, onClose }: Props) => {
 						{/* Paid By */}
 						<div>
 							<label className="block text-sm font-medium text-slate-700 mb-1.5">Paid by</label>
-							<div className="relative cursor-pointer group">
-								<div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
-									<img src="https://i.pravatar.cc/150?img=68" alt="You" className="w-6 h-6 rounded-full" />
+							<div className="relative">
+								<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+									<div className="w-6 h-6 rounded-full bg-teal-50 text-teal-600 flex items-center justify-center text-xs font-bold">
+										{currentUserName.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()}
+									</div>
 								</div>
-								<div className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 group-hover:bg-white transition-colors flex items-center justify-between">
-									<span>You</span>
-								</div>
-								<div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
-									<ArrowsRightLeftIcon className="w-4 h-4" />
+								<div className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700">
+									{currentUserName}
 								</div>
 							</div>
 						</div>
 
 					</div>
 
-					<div className="border-t border-slate-100 pt-6">
-
-						{/* Split Header & Segmented Control */}
-						<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-							<h3 className="text-sm font-bold text-slate-700">Split Method</h3>
-
-							{/* Segmented Control */}
-							<div className="flex items-center bg-slate-50 border border-slate-200 p-1 rounded-lg">
-								{['Equally', 'Percentage', 'Exact'].map((method) => (
-									<button
-										key={method}
-										onClick={() => setSplitMethod(method as 'Equally' | 'Percentage' | 'Exact')}
-										className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-all ${splitMethod === method
-											? 'bg-teal-500 text-white shadow-sm'
-											: 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
-											}`}
-									>
-										{method}
-									</button>
-								))}
-							</div>
-						</div>
-
-						{/* Users List */}
-						<div className="space-y-2 bg-slate-50 p-2 rounded-xl border border-slate-100">
-
-							{/* User 1 (Active/Payer) */}
-							<div className="flex items-center justify-between p-2 hover:bg-white rounded-lg transition-colors cursor-pointer">
-								<div className="flex items-center gap-3">
-									<div className="relative">
-										<img src="https://i.pravatar.cc/150?img=11" alt="Alex" className="w-10 h-10 rounded-full" />
-										<div className="absolute -bottom-1 -left-1 bg-teal-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-white">
-											You
-										</div>
-									</div>
-									<div>
-										<p className="text-sm font-bold text-slate-900">Alex Johnson</p>
-										<p className="text-xs text-teal-500 font-medium">Payer</p>
-									</div>
-								</div>
-								<div className="text-right">
-									<p className="text-sm font-bold text-slate-900">$0.00</p>
-									<p className="text-xs text-slate-400">100%</p>
-								</div>
-							</div>
-
-							{/* User 2 (Inactive) */}
-							<div className="flex items-center justify-between p-2 hover:bg-white rounded-lg transition-colors cursor-pointer opacity-60 grayscale-[50%]">
-								<div className="flex items-center gap-3">
-									<img src="https://i.pravatar.cc/150?img=5" alt="Sarah" className="w-10 h-10 rounded-full" />
-									<div>
-										<p className="text-sm font-medium text-slate-500">Sarah Smith</p>
-									</div>
-								</div>
-								<div className="text-right">
-									<p className="text-sm font-medium text-slate-400">$0.00</p>
-									<p className="text-xs text-slate-300">0%</p>
-								</div>
-							</div>
-
-						</div>
-					</div>
+					
 
 				</div>
 
 				{/* --- FOOTER --- */}
-				<div className="p-6 border-t border-slate-100 bg-white shrink-0 flex justify-end gap-3 rounded-b-2xl">
-					<Button variant="outline" onClick={handleClose} className="py-2.5">
-						Cancel
-					</Button>
-					<Button variant="primary" onClick={handleSave} className="py-2.5 flex items-center gap-2">
-						<CheckIcon className="w-4 h-4" />
-						Save Expense
-					</Button>
+				<div className="p-6 border-t border-slate-100 bg-white shrink-0 rounded-b-2xl">
+					{error && (
+						<p className="text-sm text-red-500 font-medium mb-3 text-right">{error}</p>
+					)}
+					<div className="flex justify-end gap-3">
+						<Button variant="outline" onClick={handleClose} disabled={isLoading} className="py-2.5">
+							Cancel
+						</Button>
+						<Button variant="primary" onClick={handleSave} disabled={isLoading || !isFormValid} className="py-2.5 flex items-center gap-2">
+							{isLoading ? (
+								<svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+									<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+									<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z" />
+								</svg>
+							) : (
+								<CheckIcon className="w-4 h-4" />
+							)}
+							{isLoading ? 'Saving...' : 'Save Expense'}
+						</Button>
+					</div>
 				</div>
 
 			</div>

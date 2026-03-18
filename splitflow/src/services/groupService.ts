@@ -1,4 +1,4 @@
-import { apiClient } from '../helper/apiClient';
+import { apiClient } from '../utils/apiClient';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -101,6 +101,15 @@ const groupService = {
   async getGroupExpenses(groupId: string): Promise<RawExpense[]> {
     const res = await apiClient.get(`/groups/${groupId}/expenses`);
     return res.data.expenses;
+  },
+
+  async addMember(groupId: string, email: string): Promise<string> {
+    const res = await apiClient.post(`/groups/${groupId}/members`, { email });
+    return res.data.member.user_id as string;
+  },
+
+  async removeMember(groupId: string, userId: string): Promise<void> {
+    await apiClient.delete(`/groups/${groupId}/members/${userId}`);
   },
 
   async getGroupBalances(groupId: string): Promise<BalanceEntry[]> {

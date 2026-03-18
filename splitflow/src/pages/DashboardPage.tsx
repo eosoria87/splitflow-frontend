@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import Sidebar from "../components/navigation/Sidebar";
-import Header from "../components/navigation/Header";
+import Sidebar from "../components/layout/Sidebar";
+import Header from "../components/layout/Header";
 import TotalBalanceCard from "../components/dashboard/TotalBalanceCard";
 import GroupGrid from "../components/dashboard/GroupGrid";
 import RecentActivityCard from "../components/dashboard/RecentActivityCard";
@@ -48,7 +48,7 @@ const DashboardPage = () => {
 			// Pass already-fetched expenses so group prefetch only needs the detail call
 			groups.forEach(g => prefetchGroup(g.id, user.id, groupExpensesMap[g.id]));
 
-			const freshGroups = dashboardService.getUserGroups(groups);
+			const freshGroups = dashboardService.getUserGroups(groups, groupExpensesMap);
 			const balanceData = dashboardService.getOverallBalances(user.id, groupExpensesMap);
 			const activityData = dashboardService.getRecentActivity(user.id, allExpenses);
 
@@ -100,10 +100,11 @@ const DashboardPage = () => {
 				<Header
 					title='Dashboard'
 					subtitle={`Welcome back ${user.name ? user.name.split(' ')[0] : ''}, let's settle up!`}
+					customAction={<></>}
 				/>
 
 				{/* --- THE CORE GRID --- */}
-				<div className="xl:pl-64  sm:px-8 pb-12  gap-8 ">
+				<div className="px-4 sm:px-8 pb-12 gap-8">
 					<TotalBalanceCard
 						totalBalance={balances.totalBalance}
 						posBalance={balances.posBalance}

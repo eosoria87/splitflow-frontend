@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { EyeIcon, UserIcon } from "@heroicons/react/24/outline";
 import Logo from "../components/ui/Logo";
 import Button from "../components/ui/Button";
-import FooterBar from "../components/navigation/FooterBar";
+import FooterBar from "../components/layout/FooterBar";
 import { useAuth } from "../hooks/useAuth";
 import authService from "../services/authService";
 
