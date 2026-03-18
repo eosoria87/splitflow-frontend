@@ -1,6 +1,6 @@
-import { apiClient } from "../helper/apiClient";
+import { apiClient } from "../utils/apiClient";
 import type { RawExpense } from "./groupService";
-import formatRelativeTime from "../helper/formatRelativeTime";
+import formatRelativeTime from "../utils/formatRelativeTime";
 
 export const DASHBOARD_CACHE_KEY = 'sf_dashboard';
 

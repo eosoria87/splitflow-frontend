@@ -13,26 +13,32 @@ import { categoryConfig } from "../constants/transactionCategories";
 import MainContainer from "../components/ui/MainContainer";
 import { mockMembers } from "../data/mockMembers";
 import type { Member } from "../types/Member";
-import Header from "../components/navigation/Header";
-import Sidebar from "../components/navigation/Sidebar";
+import Header from "../components/layout/Header";
+import Sidebar from "../components/layout/Sidebar";
 import groupService from "../services/groupService";
 import { useAuth } from "../hooks/useAuth";
 
 // Maps frontend category keys to the values the backend accepts
 const categoryToBackend: Record<TransactionCategory, string> = {
-	transport: 'travel',
-	accommodation: 'home',
-	food: 'other',
+	food: 'food',
+	transport: 'transport',
+	accommodation: 'accommodation',
 	shopping: 'other',
+	entertainment: 'entertainment',
+	utilities: 'utilities',
+	other: 'other',
 };
 
 
 // 2. Map our strict types to the friendly UI labels seen in your design
 const categoryLabels: Record<TransactionCategory, string> = {
+	food: "Dining",
 	transport: "Travel",
 	accommodation: "Home",
-	food: "Dining",
-	shopping: "Other"
+	shopping: "Shopping",
+	entertainment: "Entertainment",
+	utilities: "Utilities",
+	other: "Other",
 };
 
 // Extract the keys from our config so we can loop through them

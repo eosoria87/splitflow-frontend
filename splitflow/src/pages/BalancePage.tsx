@@ -1,9 +1,9 @@
-import Sidebar from "../components/navigation/Sidebar";
-import Header from "../components/navigation/Header";
+import Sidebar from "../components/layout/Sidebar";
+import Header from "../components/layout/Header";
 import { useState } from "react";
-import BalanceCard from "../components/balance/BalanceCard";
+import BalanceCard from "../components/ui/BalanceCard";
 import MainContainer from "../components/ui/MainContainer";
-import RecoveredProgress from "../components/balance/RecoveredProgress";
+import RecoveredProgress from "../components/ui/RecoveredProgress";
 
 
 const BalancePage = () => {

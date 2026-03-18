@@ -4,7 +4,7 @@ import Button from "./Button";
 import Dropdown from "./Dropdown";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
-import { apiClient } from "../../helper/apiClient";
+import { apiClient } from "../../utils/apiClient";
 
 const CATEGORIES: { value: string; label: string }[] = [
 	{ value: "food", label: "Food & Dining" },

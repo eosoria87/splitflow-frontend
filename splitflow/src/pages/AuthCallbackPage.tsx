@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import Logo from '../components/ui/Logo';
-import FooterBar from '../components/navigation/FooterBar';
+import FooterBar from '../components/layout/FooterBar';
 
 const AuthCallbackPage = () => {
   const [searchParams] = useSearchParams();

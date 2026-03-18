@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import Sidebar from "../components/navigation/Sidebar";
-import Header from "../components/navigation/Header";
+import Sidebar from "../components/layout/Sidebar";
+import Header from "../components/layout/Header";
 import TotalBalanceCard from "../components/dashboard/TotalBalanceCard";
 import GroupGrid from "../components/dashboard/GroupGrid";
 import RecentActivityCard from "../components/dashboard/RecentActivityCard";

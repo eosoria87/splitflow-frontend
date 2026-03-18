@@ -4,13 +4,13 @@ import {
 	CheckCircleIcon, ExclamationTriangleIcon
 } from "@heroicons/react/24/outline";
 import MainContainer from "../components/ui/MainContainer";
-import Header from "../components/navigation/Header"; 
+import Header from "../components/layout/Header";
 import Button from "../components/ui/Button";
 import KpiCard from "../components/ui/KpiCard";
 import FilterSelect from "../components/ui/FilterSelect";
 import { mockAuditLogs } from "../data/mockAuditLogs";
 import { categoryConfig } from "../constants/transactionCategories";
-import Sidebar from "../components/navigation/Sidebar";
+import Sidebar from "../components/layout/Sidebar";
 
 const statusColors = {
 	Settled: "bg-teal-50 text-primary",
