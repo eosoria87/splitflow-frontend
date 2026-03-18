@@ -15,6 +15,7 @@ interface Props {
 }
 
 const MAX_VISIBLE = 5;
+const Z_STACK = ['z-[5]', 'z-[4]', 'z-[3]', 'z-[2]', 'z-[1]'] as const;
 
 const getInitials = (name: string) =>
 	name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
@@ -75,11 +76,11 @@ const GroupDetailsBar = ({ groupName, category, dateRange, location, memberNames
 					{visible.length > 0 && (
 						<div className="flex -space-x-2">
 							{visible.map((name, i) => (
-								<div key={i} className="relative group">
+								<div key={i} className={`relative group hover:z-10 ${Z_STACK[i] ?? 'z-0'}`}>
 									<div className="w-9 h-9 rounded-full ring-2 ring-white bg-teal-50 text-teal-600 flex items-center justify-center text-xs font-bold cursor-default">
 										{getInitials(name)}
 									</div>
-									<div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-slate-800 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20">
+									<div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1.5 bg-slate-800 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
 										{name}
 										<div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800" />
 									</div>
