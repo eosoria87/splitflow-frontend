@@ -82,7 +82,7 @@ const CreateGroupPage = () => {
 
 	// Step 2 state
 	const [inviteEmail, setInviteEmail] = useState("");
-	const [addedMembers, setAddedMembers] = useState<string[]>([]);
+	const [addedMembers, setAddedMembers] = useState<{ email: string; userId: string }[]>([]);
 	const [inviteError, setInviteError] = useState<string | null>(null);
 	const [isInviting, setIsInviting] = useState(false);
 
@@ -125,21 +125,21 @@ const CreateGroupPage = () => {
 	const handleAddMember = async () => {
 		const email = inviteEmail.trim().toLowerCase();
 		if (!email || !createdGroupId) return;
-		if (addedMembers.includes(email)) {
+		if (addedMembers.some(m => m.email === email)) {
 			setInviteError('This email is already in the group.');
 			return;
 		}
 		setInviteError(null);
 		setIsInviting(true);
 		try {
-			await groupService.addMember(createdGroupId, email);
-			setAddedMembers(prev => [...prev, email]);
+			const userId = await groupService.addMember(createdGroupId, email);
+			setAddedMembers(prev => [...prev, { email, userId }]);
 			setInviteEmail("");
 		} catch (err: unknown) {
-			const msg = err instanceof Error ? err.message : '';
+			const backendMsg: string = (err as any)?.response?.data?.error ?? (err instanceof Error ? err.message : '');
 			setInviteError(
-				msg.toLowerCase().includes('not found')
-					? 'This email is not registered in Splitflow.'
+				backendMsg.toLowerCase().includes('not found')
+					? 'This email is not registered. The person must have a Splitflow account to be added.'
 					: 'Failed to add member. Please try again.'
 			);
 		} finally {
@@ -147,8 +147,16 @@ const CreateGroupPage = () => {
 		}
 	};
 
-	const handleRemoveMember = (email: string) => {
-		setAddedMembers(prev => prev.filter(e => e !== email));
+	const handleRemoveMember = async (email: string) => {
+		if (!createdGroupId) return;
+		const member = addedMembers.find(m => m.email === email);
+		if (!member) return;
+		try {
+			await groupService.removeMember(createdGroupId, member.userId);
+			setAddedMembers(prev => prev.filter(m => m.email !== email));
+		} catch {
+			setInviteError('Failed to remove member. Please try again.');
+		}
 	};
 
 	const handleFinish = () => {
@@ -262,7 +270,7 @@ const CreateGroupPage = () => {
 
 								{/* Invite input */}
 								<div className="mb-6">
-									<label className="block text-sm font-medium text-slate-700 mb-2">Add member by email <span className="text-red-400">*</span></label>
+									<label className="block text-sm text-left font-medium text-slate-700 mb-2">Add member by email <span className="text-red-400">*</span></label>
 									<div className="flex gap-2">
 										<input
 											type="email"
@@ -277,7 +285,7 @@ const CreateGroupPage = () => {
 											{isInviting ? '...' : 'Add'}
 										</Button>
 									</div>
-									{inviteError && <p className="text-red-500 text-xs mt-1.5">{inviteError}</p>}
+									{inviteError && <p className="text-red-500 text-xs mt-1.5 text-left">{inviteError}</p>}
 								</div>
 
 								{/* Members list */}
@@ -305,8 +313,8 @@ const CreateGroupPage = () => {
 										</div>
 
 										{/* Added members */}
-										{addedMembers.map((email) => (
-											<div key={email} className="flex items-center justify-between p-3 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors">
+										{addedMembers.map(({ email, userId }) => (
+											<div key={userId} className="flex items-center justify-between p-3 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors">
 												<div className="flex items-center gap-3">
 													<div className="w-9 h-9 rounded-full bg-teal-50 text-teal-600 flex items-center justify-center text-xs font-bold shrink-0">
 														{email[0].toUpperCase()}

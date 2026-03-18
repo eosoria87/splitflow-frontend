@@ -103,9 +103,13 @@ const groupService = {
     return res.data.expenses;
   },
 
-  async addMember(groupId: string, email: string): Promise<void> {
+  async addMember(groupId: string, email: string): Promise<string> {
     const res = await apiClient.post(`/groups/${groupId}/members`, { email });
-    if (res.status >= 400) throw new Error(res.data?.error ?? 'Failed to add member');
+    return res.data.member.user_id as string;
+  },
+
+  async removeMember(groupId: string, userId: string): Promise<void> {
+    await apiClient.delete(`/groups/${groupId}/members/${userId}`);
   },
 
   async getGroupBalances(groupId: string): Promise<BalanceEntry[]> {
