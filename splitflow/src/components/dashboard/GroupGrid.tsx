@@ -3,6 +3,7 @@ import CreateGroupCard from './CreateGroupCard';
 import GroupCard from './GroupCard';
 import type { DashboardGroup } from '../../services/dashboardService';
 import { groupCategoryConfig } from '../../constants/transactionCategories';
+import { loadGroupCache } from '../../services/groupCacheService';
 
 interface Props {
   groups: DashboardGroup[];
@@ -31,6 +32,7 @@ const GroupGrid = ({ groups }: Props) => {
               icon={<Icon className="w-5 h-5" />}
               iconBgClass={config.color}
               status={group.status}
+              memberNames={loadGroupCache(group.id)?.memberNames ?? []}
             />
           );
         })}
