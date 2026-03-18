@@ -1,4 +1,5 @@
-import { CalendarIcon, MapPinIcon, TagIcon } from "@heroicons/react/24/outline";
+import { CalendarIcon, MapPinIcon } from "@heroicons/react/24/outline";
+import { groupCategoryConfig } from "../../constants/transactionCategories";
 
 interface Props {
 	category: string;
@@ -27,10 +28,14 @@ const GroupDetailsBar = ({ category, dateRange, location, memberNames = [] }: Pr
 			<div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm font-medium text-slate-500">
 
 				{/* Category */}
-				<div className="flex items-center gap-1.5 bg-teal-50 text-teal-600 px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider">
-					<TagIcon className="w-3.5 h-3.5" />
-					{category}
-				</div>
+				{(() => {
+					const config = groupCategoryConfig[category as keyof typeof groupCategoryConfig] ?? groupCategoryConfig.other;
+					return (
+						<div className={`flex items-center ${config.color} px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider`}>
+							{config.name}
+						</div>
+					);
+				})()}
 
 				{/* Date */}
 				{dateRange && (

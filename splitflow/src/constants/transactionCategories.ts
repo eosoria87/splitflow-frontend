@@ -1,4 +1,4 @@
-import { BoltIcon, CakeIcon, HeartIcon, HomeModernIcon, MusicalNoteIcon, ShoppingBagIcon, TagIcon, TruckIcon, UserGroupIcon } from "@heroicons/react/24/outline";
+import { BoltIcon, CakeIcon, GlobeAltIcon, HeartIcon, HomeModernIcon, MusicalNoteIcon, ShoppingBagIcon, TagIcon, UserGroupIcon, TruckIcon } from "@heroicons/react/24/outline";
 import type { GroupCategory, TransactionCategory } from "../types/Transaction";
 
 export const categoryConfig: Record<TransactionCategory, { icon: React.ElementType, color: string, name: string}> = {
@@ -12,7 +12,7 @@ export const categoryConfig: Record<TransactionCategory, { icon: React.ElementTy
 };
 
 export const groupCategoryConfig: Record<GroupCategory, { icon: React.ElementType, color: string, name: string }> = {
-	travel: { icon: TruckIcon, color: "bg-blue-50 text-blue-500", name: 'Travel' },
+	travel: { icon: GlobeAltIcon, color: "bg-blue-50 text-blue-500", name: 'Travel' },
 	home: { icon: HomeModernIcon, color: "bg-purple-50 text-purple-500", name: 'Home' },
 	couple: { icon: HeartIcon, color: "bg-pink-50 text-pink-500", name: 'Couple' },
 	friends: { icon: UserGroupIcon, color: "bg-indigo-50 text-indigo-500", name: 'Friends' },

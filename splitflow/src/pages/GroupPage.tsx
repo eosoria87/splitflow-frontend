@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { PaperAirplaneIcon } from "@heroicons/react/24/outline";
+import { groupCategoryConfig } from '../constants/transactionCategories';
 import GroupBalanceCard from "../components/group/GroupBalanceCard";
 import TransactionFeed from "../components/group/TransactionFeed";
 import GroupDetailsBar from "../components/group/GroupDetailsBar";
@@ -63,10 +63,12 @@ const GroupPage = () => {
       <main className="flex-1 flex flex-col min-h-screen">
         <Header
           title={groupName || 'Loading...'}
-          icon={<PaperAirplaneIcon />}
+          icon={(() => { const Icon = (groupCategoryConfig[category as keyof typeof groupCategoryConfig] ?? groupCategoryConfig.other).icon; return <Icon />; })()}
         />
         <GroupDetailsBar
           category={category}
+          dateRange='13/08/2026'
+          location='Bali'
           membersCount={membersCount}
           memberAvatars={[]}
           memberNames={memberNames}
