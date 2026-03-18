@@ -19,7 +19,7 @@ const Header = ({ title, subtitle, icon, customAction, hideAction }: Props) => {
 		<div >
 			<AddExpenseModal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false) }} />
 			{/* --- TOP HEADER --- */}
-			<header className={`xl:pl-64 sm:px-8 pb-8 flex flex-row items-center gap-2 ${hideAction ? 'justify-center' : 'justify-between'}`}>
+			<header className={`px-4 sm:px-8 pb-8 flex flex-row items-center gap-2 ${hideAction ? 'justify-center' : 'justify-between'}`}>
 				{!hideAction && <MobileMenu />}
 				{icon &&
 					<div className='text-primary size-15 bg-white border border-slate-200 rounded-2xl p-4 hidden xl:block shrink-0'>

@@ -29,7 +29,7 @@ const GroupDetailsBar = ({ groupName, category, dateRange, location, memberNames
 	const textColorClass = config.color.split(' ').find(c => c.startsWith('text-')) ?? 'text-teal-500';
 
 	return (
-		<div className="xl:pl-64 px-4 sm:px-8 pt-8 pb-8">
+		<div className="px-4 sm:px-8 pt-8 pb-8">
 			<AddExpenseModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
 
 			{/* Breadcrumb */}

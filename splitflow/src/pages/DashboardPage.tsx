@@ -104,7 +104,7 @@ const DashboardPage = () => {
 				/>
 
 				{/* --- THE CORE GRID --- */}
-				<div className="xl:pl-64  sm:px-8 pb-12  gap-8 ">
+				<div className="px-4 sm:px-8 pb-12 gap-8">
 					<TotalBalanceCard
 						totalBalance={balances.totalBalance}
 						posBalance={balances.posBalance}

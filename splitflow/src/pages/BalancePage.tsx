@@ -21,7 +21,7 @@ const BalancePage = () => {
 				<Header title="" />
 
 				{/* --- THE CORE GRID --- */}
-				<div className="xl:pl-64 sm:px-8 pb-12  gap-8 ">
+				<div className="px-4 sm:px-8 pb-12 gap-8">
 					{/* --- HERO SECTION --- */}
 					<header className="text-center space-y-4">
 						<p className="text-[10px] uppercase tracking-widest font-medium text-accent">Your Net Position</p>
