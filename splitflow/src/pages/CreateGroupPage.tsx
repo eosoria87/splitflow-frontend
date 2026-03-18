@@ -136,7 +136,7 @@ const CreateGroupPage = () => {
 			setAddedMembers(prev => [...prev, { email, userId }]);
 			setInviteEmail("");
 		} catch (err: unknown) {
-			const backendMsg: string = (err as any)?.response?.data?.error ?? (err instanceof Error ? err.message : '');
+			const backendMsg: string = (err as Record<string, unknown> & { response?: { data?: { error?: string } } })?.response?.data?.error ?? (err instanceof Error ? err.message : '');
 			setInviteError(
 				backendMsg.toLowerCase().includes('not found')
 					? 'This email is not registered. The person must have a Splitflow account to be added.'
@@ -164,12 +164,13 @@ const CreateGroupPage = () => {
 	};
 
 	return (
-		<div className="min-h-screen bg-slate-50 pt-8 pb-12">
-			<Header title="Create New Group" subtitle="Set up your shared expense group." hideAction />
+		<div className="min-h-screen flex">
 			<Sidebar />
+			<main className="flex-1 flex flex-col min-h-screen bg-slate-50">
+			<Header title="Create New Group" subtitle="Set up your shared expense group." hideAction />
 
 			<MainContainer columnsNum={1}>
-				<div className="flex flex-col items-center max-w-xl mx-auto">
+				<div className="flex flex-col items-center max-w-xl mx-auto pb-12">
 					<StepIndicator current={step} />
 
 					{/* ── STEP 1: Group Details ── */}
@@ -357,6 +358,7 @@ const CreateGroupPage = () => {
 					)}
 				</div>
 			</MainContainer>
+			</main>
 		</div>
 	);
 };

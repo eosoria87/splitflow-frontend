@@ -18,7 +18,7 @@ const GroupGrid = ({ groups }: Props) => {
         </Link>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
         {groups.map((group) => {
           const config = groupCategoryConfig[group.category as keyof typeof groupCategoryConfig] ?? groupCategoryConfig.other;
           const Icon = config.icon;
