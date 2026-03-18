@@ -1,11 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { groupCategoryConfig } from '../constants/transactionCategories';
 import GroupBalanceCard from "../components/group/GroupBalanceCard";
 import TransactionFeed from "../components/group/TransactionFeed";
 import GroupDetailsBar from "../components/group/GroupDetailsBar";
 import OptimizationEngineCard from "../components/group/OptimizationEngineCard";
-import Header from "../components/layout/Header";
 import Sidebar from "../components/layout/Sidebar";
 import MainContainer from "../components/ui/MainContainer";
 import { buildGroupCache, loadGroupCache, saveGroupCache } from '../services/groupCacheService';
@@ -24,7 +22,6 @@ const GroupPage = () => {
 
   const [groupName, setGroupName] = useState(cached?.groupName ?? '');
   const [category, setCategory] = useState(cached?.category ?? 'other');
-  const [membersCount, setMembersCount] = useState(cached?.membersCount ?? 0);
   const [memberNames, setMemberNames] = useState<string[]>(cached?.memberNames ?? []);
   const [balance, setBalance] = useState(cached?.balance ?? 0);
   const [transactionGroups, setTransactionGroups] = useState<TransactionGroup[]>(cached?.transactionGroups ?? []);
@@ -34,7 +31,6 @@ const GroupPage = () => {
     buildGroupCache(id, getCurrentUserId()).then(fresh => {
       setGroupName(fresh.groupName);
       setCategory(fresh.category);
-      setMembersCount(fresh.membersCount);
       setMemberNames(fresh.memberNames);
       setBalance(fresh.balance);
       setTransactionGroups(fresh.transactionGroups);
@@ -61,16 +57,11 @@ const GroupPage = () => {
     <div className="min-h-screen flex">
       <Sidebar />
       <main className="flex-1 flex flex-col min-h-screen">
-        <Header
-          title={groupName || 'Loading...'}
-          icon={(() => { const Icon = (groupCategoryConfig[category as keyof typeof groupCategoryConfig] ?? groupCategoryConfig.other).icon; return <Icon />; })()}
-        />
         <GroupDetailsBar
+          groupName={groupName}
           category={category}
           dateRange='13/08/2026'
           location='Bali'
-          membersCount={membersCount}
-          memberAvatars={[]}
           memberNames={memberNames}
         />
         <MainContainer columnsNum={3}>
