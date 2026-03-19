@@ -31,6 +31,8 @@ const DashboardPage = () => {
 	const { user, isLoading } = useAuth();
 	const cache = loadCache();
 
+	const [isFetching, setIsFetching] = useState<boolean>(!cache);
+
 	const [balances, setBalances] = useState<OverallBalances>(
 		cache?.balances ?? { totalBalance: 0, posBalance: 0, negBalance: 0, monthlyChange: null }
 	);
@@ -41,26 +43,31 @@ const DashboardPage = () => {
 		const fetchDashboardData = async () => {
 			if (!user) return;
 
-			const groups = await dashboardService.getGroups();
-			const groupExpensesMap = await dashboardService.getGroupExpenses(groups);
-			const allExpenses = Object.values(groupExpensesMap).flat();
+			if (!cache) setIsFetching(true);
 
-			// Pass already-fetched expenses so group prefetch only needs the detail call
-			groups.forEach(g => prefetchGroup(g.id, user.id, groupExpensesMap[g.id]));
+			try {
+				const groups = await dashboardService.getGroups();
+				const groupExpensesMap = await dashboardService.getGroupExpenses(groups);
+				const allExpenses = Object.values(groupExpensesMap).flat();
 
-			const freshGroups = dashboardService.getUserGroups(groups, groupExpensesMap);
-			const balanceData = dashboardService.getOverallBalances(user.id, groupExpensesMap);
-			const activityData = dashboardService.getRecentActivity(user.id, allExpenses);
+				groups.forEach(g => prefetchGroup(g.id, user.id, groupExpensesMap[g.id]));
 
-			setBalances(balanceData);
-			setUserGroups(freshGroups);
-			setRecentActivity(activityData);
+				const freshGroups = dashboardService.getUserGroups(groups, groupExpensesMap);
+				const balanceData = dashboardService.getOverallBalances(user.id, groupExpensesMap);
+				const activityData = dashboardService.getRecentActivity(user.id, allExpenses);
 
-			sessionStorage.setItem(CACHE_KEY, JSON.stringify({
-				balances: balanceData,
-				userGroups: freshGroups,
-				recentActivity: activityData,
-			}));
+				setBalances(balanceData);
+				setUserGroups(freshGroups);
+				setRecentActivity(activityData);
+
+				sessionStorage.setItem(CACHE_KEY, JSON.stringify({
+					balances: balanceData,
+					userGroups: freshGroups,
+					recentActivity: activityData,
+				}));
+			} finally {
+				setIsFetching(false);
+			}
 		};
 
 		fetchDashboardData();
@@ -106,6 +113,7 @@ const DashboardPage = () => {
 				{/* --- THE CORE GRID --- */}
 				<div className="px-4 sm:px-8 pb-12 gap-8">
 					<TotalBalanceCard
+						isLoading={isFetching} 
 						totalBalance={balances.totalBalance}
 						posBalance={balances.posBalance}
 						negBalance={balances.negBalance}
@@ -118,7 +126,10 @@ const DashboardPage = () => {
 				<MainContainer columnsNum={3}>
 					{/* --- Groups Grid --- */}
 					<div className="xl:col-span-2 flex flex-col gap-4">
-						<GroupGrid groups={userGroups} />
+						<GroupGrid 
+							isLoading={isFetching}
+							groups={userGroups} 
+						/>
 					</div>
 
 					{/* --- Activity List --- */}
