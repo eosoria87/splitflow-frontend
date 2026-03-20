@@ -1,4 +1,5 @@
 import { apiClient } from "../utils/apiClient";
+import type { Group } from "./groupService";
 
 export interface FlowInsights {
 	monthlySpend: number;
@@ -53,8 +54,7 @@ export const balanceService = {
 				return { owedToMe, iOwe, totalOwedToMe, totalIOwe };
 			}
 
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			const balancePromises = groups.map((g: any) => apiClient.get(`/groups/${g.id}/balances`));
+			const balancePromises = groups.map((g: Group) => apiClient.get(`/groups/${g.id}/balances`));
 			const balanceResponses = await Promise.allSettled(balancePromises);
 
 			balanceResponses.forEach((res, index) => {
