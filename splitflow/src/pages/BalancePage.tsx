@@ -115,8 +115,8 @@ const BalancePage = () => {
 			<main className="flex-1 flex flex-col min-h-screen pt-2">
 				<Header title="" />
 
-				<div className="xl:pl-64 sm:px-8 pb-12 gap-8 ">
-					<header className="text-center space-y-4">
+				<div className=" sm:px-8 pb-12 gap-8">
+					<header className="text-center  space-y-4 ">
 						<p className="text-[10px] uppercase tracking-widest font-medium text-slate-400">Your Net Position</p>
 
 						{/*  HERO SKELETON  */}
