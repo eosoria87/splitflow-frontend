@@ -7,37 +7,40 @@ import {
 import MainContainer from "../components/ui/MainContainer";
 import Header from "../components/layout/Header";
 import KpiCard from "../components/audit/KpiCard";
-import { categoryConfig } from "../constants/transactionCategories";
 import Sidebar from "../components/layout/Sidebar";
-
-import { expenseService, type ExpenseLog, type ExpenseKPIs } from "../services/expenseService";
-import { useAuth } from "../hooks/useAuth";
-import { useEffect, useState, useMemo } from "react";
 import FilterSelect from "../components/audit/FilterSelect";
+import { categoryConfig } from "../constants/transactionCategories";
+import { expenseService, type ExpenseKPIs, type ExpenseLog } from "../services/expenseService";
+import { useAuth } from "../hooks/useAuth";
+import { useEffect, useState } from "react";
+import { formatAmount } from "../utils/formatters";
+import { getStatusColors } from "../utils/themeUtils";
+import { useExpenseTable } from "../hooks/useExpenseTable";
 
-const getStatusColors = (status: string) => {
-	switch (status.toLowerCase()) {
-		case 'settled': return "bg-teal-50 text-primary";
-		case 'pending': return "bg-orange-50 text-orange-600";
-		case 'disputed': return "bg-red-50 text-red-600";
-		default: return "bg-teal-50 text-slate-400";
-	}
-}
 
-const formatAmount = (n: number) =>
-	n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-	const AuditLogPage = () => {
+const AuditLogPage = () => {
 	const { user, isLoading } = useAuth();
-	
-	const [isFetching, setIsFetching] = useState(true);
 	const [logs, setLogs] = useState<ExpenseLog[]>([]);
+	const [isFetching, setIsFetching] = useState(true);
 	const [kpis, setKpis] = useState<ExpenseKPIs>({ totalVolume: 0, youPaid: 0, totalTransactions: 0, activeGroups: 0 });
 
-	// 🌟 1. FILTER STATES 🌟
-	const [searchQuery, setSearchQuery] = useState("");
-	const [selectedGroup, setSelectedGroup] = useState("All Groups");
-	const [selectedCategory, setSelectedCategory] = useState("All Categories");
+	const {
+        // State
+        inputValue, setInputValue,
+        searchQuery, setSearchQuery,
+        selectedGroup, setSelectedGroup,
+        selectedCategory, setSelectedCategory,
+        currentPage, setCurrentPage,
+        rowsPerPage, setRowsPerPage,
+        
+        // Computed Values
+        uniqueGroups, uniqueCategories,
+        filteredLogs, paginatedLogs,
+        totalPages, startIndex, endIndex,
+        
+        // Helpers
+        hasActiveFilters, clearAllFilters
+    } = useExpenseTable(logs);
 
 	useEffect(() => {
 		const fetchExpenses = async () => {
@@ -51,57 +54,18 @@ const formatAmount = (n: number) =>
 				setIsFetching(false);
 			}
 		};
-
 		fetchExpenses();
 	}, [user]);
-
-	// 🌟 2. EXTRACT DYNAMIC OPTIONS 🌟
-	const uniqueGroups = useMemo(() => {
-		const groups = Array.from(new Set(logs.map(log => log.group)));
-		return ["All Groups", ...groups];
-	}, [logs]);
-
-	const uniqueCategories = useMemo(() => {
-		const categories = Array.from(new Set(logs.map(log => log.category)));
-		// Capitalize the category names for the UI
-		const formattedCategories = categories.map(c => c.charAt(0).toUpperCase() + c.slice(1));
-		return ["All Categories", ...formattedCategories];
-	}, [logs]);
-
-	// 🌟 3. FILTER THE LOGS 🌟
-	const filteredLogs = useMemo(() => {
-		return logs.filter((log) => {
-			// Search matches description or payer name
-			const matchesSearch = 
-				log.description.toLowerCase().includes(searchQuery.toLowerCase()) || 
-				log.payerName.toLowerCase().includes(searchQuery.toLowerCase());
-			
-			// Group match
-			const matchesGroup = selectedGroup === "All Groups" || log.group === selectedGroup;
-			
-			// Category match
-			const formattedLogCategory = log.category.charAt(0).toUpperCase() + log.category.slice(1);
-			const matchesCategory = selectedCategory === "All Categories" || formattedLogCategory === selectedCategory;
-
-			return matchesSearch && matchesGroup && matchesCategory;
-		});
-	}, [logs, searchQuery, selectedGroup, selectedCategory]);
-
-	// 🌟 4. HELPER TO CLEAR FILTERS 🌟
-	const hasActiveFilters = searchQuery !== "" || selectedGroup !== "All Groups" || selectedCategory !== "All Categories";
-	const clearAllFilters = () => {
-		setSearchQuery("");
-		setSelectedGroup("All Groups");
-		setSelectedCategory("All Categories");
-	};
-
 
 	if (isLoading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
 	if (!user) return <div className="min-h-screen flex items-center justify-center">Please log in.</div>;
 
+	const startItem = filteredLogs.length === 0 ? 0 : startIndex + 1;
+	const endItem = Math.min(endIndex, filteredLogs.length);
+
 	return (
 		<div className="min-h-screen flex">
-			<Sidebar/>
+			<Sidebar />
 			<main className="flex-1 flex flex-col min-h-screen">
 				<Header title="All Expenses" customAction={<></>} />
 
@@ -117,38 +81,48 @@ const formatAmount = (n: number) =>
 						{/* Filters Section */}
 						<div className="p-4 border-b border-slate-100 flex flex-col lg:flex-row gap-4 justify-between lg:items-center">
 							<div className="grid grid-cols-1 sm:grid-cols-2 lg:flex gap-3 flex-1">
-								
+
 								{/* Search Input */}
 								<div className="relative flex-1 lg:max-w-xs">
 									<MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-									<input 
-										type="text" 
-										placeholder="Search transactions..." 
-										value={searchQuery}
-										onChange={(e) => setSearchQuery(e.target.value)}
-										className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-teal-500/20 outline-none transition-all" 
+									<input
+										type="text"
+										placeholder="Search transactions..."
+										value={inputValue}
+										onChange={(e) => setInputValue(e.target.value)}
+										className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-teal-500/20 outline-none transition-all"
 									/>
+									{/* The clear button (only shows if there's text) */}
+									{inputValue && (
+										<button
+											onClick={() => setInputValue("")}
+											className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 font-bold text-lg leading-none"
+											aria-label="Clear search"
+										>
+											×
+										</button>
+									)}
 								</div>
 
-								{/* Dropdowns wired to state! */}
-								<FilterSelect 
-									icon={<UserGroupIcon />} 
-									value={selectedGroup} 
-									options={uniqueGroups} 
-									onChange={setSelectedGroup} 
+								{/* Dropdowns */}
+								<FilterSelect
+									icon={<UserGroupIcon />}
+									value={selectedGroup}
+									options={uniqueGroups}
+									onChange={setSelectedGroup}
 								/>
-								<FilterSelect 
-									icon={<Square3Stack3DIcon />} 
-									value={selectedCategory} 
-									options={uniqueCategories} 
-									onChange={setSelectedCategory} 
+								<FilterSelect
+									icon={<Square3Stack3DIcon />}
+									value={selectedCategory}
+									options={uniqueCategories}
+									onChange={setSelectedCategory}
 								/>
 							</div>
 
 							{/* Active Filters Summary */}
 							<div className={`flex items-center gap-3 text-sm shrink-0 transition-opacity duration-300 ${hasActiveFilters ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
 								<span className="text-slate-500 hidden lg:inline">ACTIVE FILTERS:</span>
-								
+
 								{selectedGroup !== "All Groups" && (
 									<span className="bg-teal-50 text-teal-600 px-3 py-1 rounded-full font-medium text-xs flex items-center gap-1 cursor-pointer" onClick={() => setSelectedGroup("All Groups")}>
 										{selectedGroup} <span className="text-teal-400 hover:text-teal-600 text-sm">×</span>
@@ -170,9 +144,8 @@ const formatAmount = (n: number) =>
 						</div>
 
 						{/* Table Section */}
-						<div className="overflow-x-auto min-h-[400px]">
+						<div className="overflow-x-auto min-h-100">
 							<table className="w-full text-left border-collapse whitespace-nowrap">
-								{/* ... (Keep your existing thead exactly the same) ... */}
 								<thead>
 									<tr className="border-b border-slate-100 text-[10px] uppercase tracking-wider text-slate-500 font-bold bg-slate-50/50">
 										<th className="p-4 w-12"><input type="checkbox" className="rounded border-slate-300 text-teal-500 focus:ring-teal-500" /></th>
@@ -190,7 +163,6 @@ const formatAmount = (n: number) =>
 									{isFetching ? (
 										Array.from({ length: 5 }).map((_, i) => (
 											<tr key={`skeleton-${i}`} className="animate-pulse bg-white">
-												{/* ... (Keep your existing skeleton loader TDs here!) ... */}
 												<td className="p-4"><div className="h-4 w-4 bg-slate-200 rounded"></div></td>
 												<td className="p-4">
 													<div className="h-4 w-20 bg-slate-200 rounded mb-1"></div>
@@ -207,7 +179,6 @@ const formatAmount = (n: number) =>
 										))
 									) : filteredLogs.length === 0 ? (
 										<tr>
-											{/* Make sure the colSpan matches your columns! */}
 											<td colSpan={9} className="p-12 text-center">
 												<div className="flex flex-col items-center justify-center space-y-3">
 													<MagnifyingGlassIcon className="w-8 h-8 text-slate-300" />
@@ -221,8 +192,7 @@ const formatAmount = (n: number) =>
 											</td>
 										</tr>
 									) : (
-										// 🌟 USE filteredLogs HERE INSTEAD OF logs 🌟
-										filteredLogs.map((log) => {
+										paginatedLogs.map((log) => {
 											const config = categoryConfig[log.category as keyof typeof categoryConfig] ?? categoryConfig.other;
 											const CategoryIcon = config.icon;
 
@@ -284,18 +254,68 @@ const formatAmount = (n: number) =>
 
 						{/* Pagination Footer */}
 						<div className="p-4 border-t border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-slate-500">
+
+							{/* Showing X to Y of Z */}
 							<div>
-								{/* 🌟 Update Footer to use filteredLogs.length 🌟 */}
-								Showing <span className="font-bold text-slate-900">{filteredLogs.length > 0 ? 1 : 0}</span> to <span className="font-bold text-slate-900">{filteredLogs.length}</span> of <span className="font-bold text-slate-900">{filteredLogs.length}</span> results
+								Showing <span className="font-bold text-slate-900">{startItem}</span> to <span className="font-bold text-slate-900">{endItem}</span> of <span className="font-bold text-slate-900">{filteredLogs.length}</span> results
 							</div>
+
 							<div className="flex items-center gap-4">
-								<span className="hidden sm:inline">Rows per page: 10</span>
+
+								{/* Rows Per Page Dropdown */}
+								<div className="hidden sm:flex items-center gap-2">
+									<span>Rows per page:</span>
+									<select
+										value={rowsPerPage}
+										onChange={(e) => {
+											setRowsPerPage(Number(e.target.value));
+											setCurrentPage(1); // Reset to page 1 when changing row count
+										}}
+										className="bg-transparent font-bold text-slate-900 outline-none cursor-pointer"
+									>
+										<option value={5}>5</option>
+										<option value={10}>10</option>
+										<option value={20}>20</option>
+										<option value={50}>50</option>
+									</select>
+								</div>
+
+								{/* Interactive Page Buttons */}
 								<div className="flex gap-1">
-									<button className="px-3 py-1 border border-slate-200 rounded bg-white hover:bg-slate-50 text-slate-900 shadow-sm font-medium">1</button>
+									<button
+										onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+										disabled={currentPage === 1}
+										className="px-3 py-1 border border-slate-200 rounded bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed text-slate-600 transition-colors"
+									>
+										Prev
+									</button>
+
+									{/* Dynamic Page Numbers */}
+									{Array.from({ length: totalPages }).map((_, i) => {
+										const page = i + 1;
+										return (
+											<button
+												key={page}
+												onClick={() => setCurrentPage(page)}
+												className={`px-3 py-1 border rounded transition-colors ${currentPage === page
+													? 'border-teal-500 bg-teal-50 text-teal-700 font-bold shadow-sm'
+													: 'border-slate-200 bg-white hover:bg-slate-50 text-slate-600'
+													}`}
+											>
+												{page}
+											</button>
+										);
+									})}
+									<button
+										onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+										disabled={currentPage === totalPages || totalPages === 0}
+										className="px-3 py-1 border border-slate-200 rounded bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed text-slate-600 transition-colors"
+									>
+										Next
+									</button>
 								</div>
 							</div>
 						</div>
-
 					</div>
 				</MainContainer>
 			</main>
