@@ -32,6 +32,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     try {
       const data = await authService.signup(payload);
+      localStorage.setItem(SESSION_KEY, JSON.stringify(data.session));
+      localStorage.setItem(USER_KEY, JSON.stringify(data.user));
       setUser(data.user);
       setSession(data.session);
     } finally {
@@ -43,6 +45,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     try {
       const data = await authService.login(payload);
+      localStorage.setItem(SESSION_KEY, JSON.stringify(data.session));
+      localStorage.setItem(USER_KEY, JSON.stringify(data.user));
       setUser(data.user);
       setSession(data.session);
     } finally {
@@ -54,8 +58,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     try {
       const user = await authService.getMe(accessToken);
+      const session = { access_token: accessToken, refresh_token: refreshToken, expires_at: expiresAt };
+      localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+      localStorage.setItem(USER_KEY, JSON.stringify(user));
       setUser(user);
-      setSession({ access_token: accessToken, refresh_token: refreshToken, expires_at: expiresAt });
+      setSession(session);
     } finally {
       setIsLoading(false);
     }
