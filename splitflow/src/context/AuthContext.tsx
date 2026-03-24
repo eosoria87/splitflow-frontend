@@ -41,6 +41,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (payload: Parameters<typeof authService.login>[0]) => {
     setIsLoading(true);
+    sessionStorage.clear();
     try {
       const data = await authService.login(payload);
       setUser(data.user);
@@ -52,6 +53,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const loginWithOAuth = async (accessToken: string, refreshToken: string, expiresAt: number) => {
     setIsLoading(true);
+    sessionStorage.clear();
     try {
       const user = await authService.getMe(accessToken);
       setUser(user);
@@ -62,7 +64,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = () => {
-    sessionStorage.removeItem('sf_balance');
+    sessionStorage.clear();
     setUser(null);
     setSession(null);
   };
