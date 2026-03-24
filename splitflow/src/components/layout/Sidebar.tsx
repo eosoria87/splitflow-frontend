@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { Cog6ToothIcon, ArrowLeftStartOnRectangleIcon } from "@heroicons/react/24/outline";
+import { ArrowLeftStartOnRectangleIcon } from "@heroicons/react/24/outline";
 import { navItems } from "../../constants/navigation";
 import Logo from "../ui/Logo";
 import { useAuth } from "../../hooks/useAuth";
@@ -42,7 +42,7 @@ const Sidebar = () => {
 
 			<div className="p-4 border-t border-slate-200 flex flex-col gap-2">
 
-				<NavLink
+				{/* <NavLink
 					to="/settings"
 					className={({ isActive }) =>
 						`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-colors ${isActive
@@ -53,7 +53,7 @@ const Sidebar = () => {
 				>
 					<Cog6ToothIcon className="w-5 h-5 stroke-2" />
 					Settings
-				</NavLink>
+				</NavLink> */}
 
 				<button
 					onClick={handleLogout}
