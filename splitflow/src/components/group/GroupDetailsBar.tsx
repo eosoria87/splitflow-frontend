@@ -4,14 +4,20 @@ import { CalendarIcon, MapPinIcon, PlusIcon } from "@heroicons/react/24/outline"
 import { groupCategoryConfig } from "../../constants/transactionCategories";
 import Button from "../ui/Button";
 import AddExpenseModal from "../ui/AddExpenseModal";
+import EditGroupModal from "../ui/EditGroupModal";
 import { PencilIcon } from '@heroicons/react/24/solid';
 
 interface Props {
+	groupId: string;
 	groupName: string;
 	category: string;
+	description?: string;
 	dateRange?: string;
 	location?: string;
 	memberNames?: string[];
+	isOwner: boolean;
+	onGroupUpdated: () => void;
+	onGroupDeleted: () => void;
 }
 
 const MAX_VISIBLE = 5;
@@ -20,8 +26,9 @@ const Z_STACK = ['z-[5]', 'z-[4]', 'z-[3]', 'z-[2]', 'z-[1]'] as const;
 const getInitials = (name: string) =>
 	name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
 
-const GroupDetailsBar = ({ groupName, category, dateRange, location, memberNames = [] }: Props) => {
+const GroupDetailsBar = ({ groupId, groupName, category, description = '', dateRange, location, memberNames = [], isOwner, onGroupUpdated, onGroupDeleted }: Props) => {
 	const [isModalOpen, setIsModalOpen] = useState(false);
+	const [isEditOpen, setIsEditOpen] = useState(false);
 	const visible = memberNames.slice(0, MAX_VISIBLE);
 	const overflow = memberNames.length - MAX_VISIBLE;
 
@@ -32,7 +39,17 @@ const GroupDetailsBar = ({ groupName, category, dateRange, location, memberNames
 	return (
 		<div className="px-4 sm:px-8 pt-8 pb-8">
 			<AddExpenseModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
-
+			<EditGroupModal
+				isOpen={isEditOpen}
+				onClose={() => setIsEditOpen(false)}
+				groupId={groupId}
+				initialName={groupName}
+				initialCategory={category}
+				initialDescription={description}
+				isOwner={isOwner}
+				onGroupUpdated={onGroupUpdated}
+				onGroupDeleted={onGroupDeleted}
+			></EditGroupModal>
 			{/* Breadcrumb */}
 			<nav className="flex items-center gap-1.5 text-sm mb-4">
 				<Link to="/groups" className="text-slate-400 hover:text-slate-600 transition-colors font-medium">
@@ -95,7 +112,7 @@ const GroupDetailsBar = ({ groupName, category, dateRange, location, memberNames
 					)}
 
 					{/* Action Buttons */}
-					<Button variant="outline" className="flex items-center gap-2 py-2 px-4">
+					<Button variant="outline" onClick={() => setIsEditOpen(true)} className="flex items-center gap-2 py-2 px-4">
 						<PencilIcon className="w-4 h-4" />
 						<span className="hidden sm:inline">Edit</span>
 					</Button>

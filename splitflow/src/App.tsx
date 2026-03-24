@@ -12,10 +12,11 @@ import DashboardPage    from './pages/DashboardPage';
 import AuthCallbackPage from './pages/AuthCallbackPage';
 
 // Lazy — secondary pages, loaded on demand
-const AuditLogPage    = lazy(() => import('./pages/AuditLogPage'));
-const BalancePage     = lazy(() => import('./pages/BalancePage'));
-const GroupPage       = lazy(() => import('./pages/GroupPage'));
-const CreateGroupPage = lazy(() => import('./pages/CreateGroupPage'));
+const AuditLogPage      = lazy(() => import('./pages/AuditLogPage'));
+const BalancePage       = lazy(() => import('./pages/BalancePage'));
+const GroupPage         = lazy(() => import('./pages/GroupPage'));
+const CreateGroupPage   = lazy(() => import('./pages/CreateGroupPage'));
+const AllExpensesPage   = lazy(() => import('./pages/AllExpensesPage'));
 
 function App() {
 	return (
@@ -33,7 +34,8 @@ function App() {
 						<Route path="/dashboard" element={<DashboardPage />} />
 						<Route path="/audit" element={<AuditLogPage />} />
 						<Route path="/balance" element={<BalancePage />} />
-						<Route path="/group/:id" element={<GroupPage />} />
+						<Route path="/allExpenses" element={<AllExpensesPage />} />
+					<Route path="/group/:id" element={<GroupPage />} />
 						<Route path="/create-group" element={<CreateGroupPage />} />
 					</Route>
 				</Routes>
