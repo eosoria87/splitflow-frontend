@@ -8,7 +8,7 @@ import { useAuth } from "../hooks/useAuth";
 import type { BalanceItem } from "../types/BalanceItem";
 import { PaperAirplaneIcon, HomeIcon, HeartIcon, UsersIcon, TagIcon } from "@heroicons/react/24/outline";
 import {
-	balanceService,
+	getBalanceData,
 	BALANCE_CACHE_KEY,
 	type GroupBalanceData,
 	type PersonBalanceData,
@@ -50,26 +50,12 @@ const BalancePage = () => {
 			if (!cache) setIsFetching(true);
 
 			try {
-				const groups = await balanceService.getGroups();
-				const [balancesMap, expensesMap, settlementsMap] = await Promise.all([
-					balanceService.getGroupBalancesMap(groups),
-					balanceService.getGroupExpensesMap(groups),
-					balanceService.getGroupSettlementsMap(groups),
-				]);
-
-				const freshGroupView  = balanceService.computeGroupView(user.id, groups, balancesMap);
-				const freshPersonView = balanceService.computePersonView(user.id, balancesMap);
-				const freshInsights   = balanceService.computeInsights(user.id, groups, balancesMap, expensesMap, settlementsMap);
+				const { groupView: freshGroupView, personView: freshPersonView, insights: freshInsights } =
+					await getBalanceData(user.id);
 
 				setGroupView(freshGroupView);
 				setPersonView(freshPersonView);
 				setInsights(freshInsights);
-
-				sessionStorage.setItem(BALANCE_CACHE_KEY, JSON.stringify({
-					groupView: freshGroupView,
-					personView: freshPersonView,
-					insights: freshInsights,
-				}));
 			} finally {
 				setIsFetching(false);
 			}
@@ -143,7 +129,7 @@ const BalancePage = () => {
 			<main className="flex-1 flex flex-col min-h-screen pt-2">
 				<Header title="" hideAction />
 
-				<div className="xl:pl-64 sm:px-8 pb-12 gap-8">
+				<div className="xl:px-8 sm:px-8 pb-12 gap-8">
 					<header className="text-center space-y-4">
 						<p className="text-[10px] uppercase tracking-widest font-medium text-slate-400">Your Net Position</p>
 

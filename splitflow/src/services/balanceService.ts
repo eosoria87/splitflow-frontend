@@ -257,29 +257,47 @@ export const balanceService = {
 	},
 };
 
-// ── Prefetch ──────────────────────────────────────────────────────────────────
+// ── Shared fetch ──────────────────────────────────────────────────────────────
+// A single in-flight promise shared between the auto-start prefetch and the page.
+// This prevents duplicate requests when both fire at the same time.
 
-export const prefetchBalance = (userId: string): void => {
-	if (sessionStorage.getItem(BALANCE_CACHE_KEY)) return;
+export interface BalancePageData {
+	groupView:  { owedToMe: GroupBalanceData[]; iOwe: GroupBalanceData[] };
+	personView: { owedToMe: PersonBalanceData[]; iOwe: PersonBalanceData[] };
+	insights:   FlowInsights;
+}
 
-	balanceService.getGroups()
-		.then(async (groups) => {
-			if (!groups.length) return;
-			const [balancesMap, expensesMap, settlementsMap] = await Promise.all([
-				balanceService.getGroupBalancesMap(groups),
-				balanceService.getGroupExpensesMap(groups),
-				balanceService.getGroupSettlementsMap(groups),
-			]);
-			const groupView   = balanceService.computeGroupView(userId, groups, balancesMap);
-			const personView  = balanceService.computePersonView(userId, balancesMap);
-			const insights    = balanceService.computeInsights(userId, groups, balancesMap, expensesMap, settlementsMap);
-			sessionStorage.setItem(BALANCE_CACHE_KEY, JSON.stringify({ groupView, personView, insights }));
-		})
-		.catch(() => { /* silent — BalancePage will fetch on mount */ });
+let inflightFetch: Promise<BalancePageData> | null = null;
+
+async function fetchAndCache(userId: string): Promise<BalancePageData> {
+	const groups = await balanceService.getGroups();
+	const [balancesMap, expensesMap, settlementsMap] = await Promise.all([
+		balanceService.getGroupBalancesMap(groups),
+		balanceService.getGroupExpensesMap(groups),
+		balanceService.getGroupSettlementsMap(groups),
+	]);
+	const groupView  = balanceService.computeGroupView(userId, groups, balancesMap);
+	const personView = balanceService.computePersonView(userId, balancesMap);
+	const insights   = balanceService.computeInsights(userId, groups, balancesMap, expensesMap, settlementsMap);
+	sessionStorage.setItem(BALANCE_CACHE_KEY, JSON.stringify({ groupView, personView, insights }));
+	return { groupView, personView, insights };
+}
+
+// Called by the page — reuses the in-flight prefetch if already running.
+export const getBalanceData = (userId: string): Promise<BalancePageData> => {
+	if (!inflightFetch) {
+		inflightFetch = fetchAndCache(userId).finally(() => { inflightFetch = null; });
+	}
+	return inflightFetch;
 };
 
 // Auto-start: fires as soon as this module loads (at app startup).
 try {
 	const userRaw = localStorage.getItem('sf_user');
-	if (userRaw) prefetchBalance(JSON.parse(userRaw).id);
+	if (userRaw) {
+		const userId = JSON.parse(userRaw).id;
+		if (!sessionStorage.getItem(BALANCE_CACHE_KEY)) {
+			inflightFetch = fetchAndCache(userId).finally(() => { inflightFetch = null; });
+		}
+	}
 } catch { /* silent */ }

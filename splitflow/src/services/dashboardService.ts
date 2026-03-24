@@ -173,30 +173,46 @@ export const dashboardService = {
 	},
 };
 
-// ── Prefetch ──────────────────────────────────────────────────────────────────
+// ── Shared fetch ──────────────────────────────────────────────────────────────
+// A single in-flight promise shared between the auto-start and the page.
+// This prevents duplicate requests when both fire at the same time.
 
-export const prefetchDashboard = (userId: string): void => {
-	if (sessionStorage.getItem(DASHBOARD_CACHE_KEY)) return;
+export interface DashboardPageData {
+	balances: OverallBalances;
+	userGroups: DashboardGroup[];
+	recentActivity: DashboardActivity[];
+	groups: RawGroup[];
+	groupExpensesMap: Record<string, RawExpense[]>;
+}
 
-	dashboardService.getGroups()
-		.then(async (groups) => {
-			if (groups.length === 0) return;
-			const groupExpensesMap = await dashboardService.getGroupExpenses(groups);
-			const allExpenses = Object.values(groupExpensesMap).flat();
-			const userGroups = dashboardService.getUserGroups(groups, groupExpensesMap);
-			const balanceData = dashboardService.getOverallBalances(userId, groupExpensesMap);
-			const activityData = dashboardService.getRecentActivity(userId, allExpenses);
-			sessionStorage.setItem(DASHBOARD_CACHE_KEY, JSON.stringify({
-				balances: balanceData,
-				userGroups,
-				recentActivity: activityData,
-			}));
-		})
-		.catch(() => { /* silent — DashboardPage will fetch on mount */ });
+let inflightFetch: Promise<DashboardPageData> | null = null;
+
+async function fetchAndCache(userId: string): Promise<DashboardPageData> {
+	const groups = await dashboardService.getGroups();
+	const groupExpensesMap = await dashboardService.getGroupExpenses(groups);
+	const allExpenses = Object.values(groupExpensesMap).flat();
+	const userGroups = dashboardService.getUserGroups(groups, groupExpensesMap);
+	const balances = dashboardService.getOverallBalances(userId, groupExpensesMap);
+	const recentActivity = dashboardService.getRecentActivity(userId, allExpenses);
+	sessionStorage.setItem(DASHBOARD_CACHE_KEY, JSON.stringify({ balances, userGroups, recentActivity }));
+	return { balances, userGroups, recentActivity, groups, groupExpensesMap };
+}
+
+// Called by the page — reuses the in-flight prefetch if already running.
+export const getDashboardData = (userId: string): Promise<DashboardPageData> => {
+	if (!inflightFetch) {
+		inflightFetch = fetchAndCache(userId).finally(() => { inflightFetch = null; });
+	}
+	return inflightFetch;
 };
 
 // Auto-start: fires as soon as this module loads (at app startup).
 try {
 	const userRaw = localStorage.getItem('sf_user');
-	if (userRaw) prefetchDashboard(JSON.parse(userRaw).id);
+	if (userRaw) {
+		const userId = JSON.parse(userRaw).id;
+		if (!sessionStorage.getItem(DASHBOARD_CACHE_KEY)) {
+			inflightFetch = fetchAndCache(userId).finally(() => { inflightFetch = null; });
+		}
+	}
 } catch { /* silent */ }

@@ -5,11 +5,9 @@ import TotalBalanceCard from "../components/dashboard/TotalBalanceCard";
 import GroupGrid from "../components/dashboard/GroupGrid";
 import RecentActivityCard from "../components/dashboard/RecentActivityCard";
 import MainContainer from "../components/ui/MainContainer";
-import { dashboardService, DASHBOARD_CACHE_KEY, type DashboardActivity, type DashboardGroup, type OverallBalances } from "../services/dashboardService";
+import { getDashboardData, DASHBOARD_CACHE_KEY, type DashboardActivity, type DashboardGroup, type OverallBalances } from "../services/dashboardService";
 import { prefetchGroup } from "../services/groupCacheService";
 import { useAuth } from "../hooks/useAuth";
-
-const CACHE_KEY = DASHBOARD_CACHE_KEY;
 
 interface DashboardCache {
 	balances: OverallBalances;
@@ -19,7 +17,7 @@ interface DashboardCache {
 
 const loadCache = (): DashboardCache | null => {
 	try {
-		const stored = sessionStorage.getItem(CACHE_KEY);
+		const stored = sessionStorage.getItem(DASHBOARD_CACHE_KEY);
 		return stored ? JSON.parse(stored) : null;
 	} catch {
 		return null;
@@ -46,25 +44,14 @@ const DashboardPage = () => {
 			if (!cache) setIsFetching(true);
 
 			try {
-				const groups = await dashboardService.getGroups();
-				const groupExpensesMap = await dashboardService.getGroupExpenses(groups);
-				const allExpenses = Object.values(groupExpensesMap).flat();
+				const { balances: balanceData, userGroups: freshGroups, recentActivity: activityData, groups, groupExpensesMap } =
+					await getDashboardData(user.id);
 
 				groups.forEach(g => prefetchGroup(g.id, user.id, groupExpensesMap[g.id]));
-
-				const freshGroups = dashboardService.getUserGroups(groups, groupExpensesMap);
-				const balanceData = dashboardService.getOverallBalances(user.id, groupExpensesMap);
-				const activityData = dashboardService.getRecentActivity(user.id, allExpenses);
 
 				setBalances(balanceData);
 				setUserGroups(freshGroups);
 				setRecentActivity(activityData);
-
-				sessionStorage.setItem(CACHE_KEY, JSON.stringify({
-					balances: balanceData,
-					userGroups: freshGroups,
-					recentActivity: activityData,
-				}));
 			} finally {
 				setIsFetching(false);
 			}
