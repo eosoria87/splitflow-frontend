@@ -62,6 +62,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = () => {
+    sessionStorage.removeItem('sf_balance');
     setUser(null);
     setSession(null);
   };
