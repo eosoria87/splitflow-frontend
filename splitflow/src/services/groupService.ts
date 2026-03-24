@@ -126,6 +126,10 @@ const groupService = {
     const res = await apiClient.put(`/groups/${groupId}`, payload);
     return res.data.group;
   },
+
+  async deleteGroup(groupId: string): Promise<void> {
+    await apiClient.delete(`/groups/${groupId}`);
+  },
 };
 
 export default groupService;

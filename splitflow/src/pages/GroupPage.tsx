@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import GroupBalanceCard from "../components/group/GroupBalanceCard";
 import TransactionFeed from "../components/group/TransactionFeed";
 import GroupDetailsBar from "../components/group/GroupDetailsBar";
@@ -17,12 +17,14 @@ const getCurrentUserId = (): string => {
 
 const GroupPage = () => {
   const { id: groupId } = useParams<{ id: string }>();
+  const navigate = useNavigate();
 
   const cached = groupId ? loadGroupCache(groupId) : null;
 
   const [groupName, setGroupName] = useState(cached?.groupName ?? '');
   const [category, setCategory] = useState(cached?.category ?? 'other');
   const [description, setDescription] = useState(cached?.description ?? '');
+  const [userRole, setUserRole] = useState(cached?.userRole ?? '');
   const [createdAt, setCreatedAt] = useState(cached?.createdAt ?? '');
   const [memberNames, setMemberNames] = useState<string[]>(cached?.memberNames ?? []);
   const [balance, setBalance] = useState(cached?.balance ?? 0);
@@ -34,6 +36,7 @@ const GroupPage = () => {
       setGroupName(fresh.groupName);
       setCategory(fresh.category);
       setDescription(fresh.description);
+      setUserRole(fresh.userRole);
       setCreatedAt(fresh.createdAt);
       setMemberNames(fresh.memberNames);
       setBalance(fresh.balance);
@@ -68,7 +71,9 @@ const GroupPage = () => {
           description={description}
           dateRange={createdAt ? new Date(createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : undefined}
           memberNames={memberNames}
+          isOwner={userRole === 'owner'}
           onGroupUpdated={() => groupId && refresh(groupId)}
+          onGroupDeleted={() => navigate('/dashboard')}
         />
         <MainContainer columnsNum={3}>
           <div className="xl:col-span-2 flex flex-col gap-4">

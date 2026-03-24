@@ -15,7 +15,9 @@ interface Props {
 	dateRange?: string;
 	location?: string;
 	memberNames?: string[];
+	isOwner: boolean;
 	onGroupUpdated: () => void;
+	onGroupDeleted: () => void;
 }
 
 const MAX_VISIBLE = 5;
@@ -24,7 +26,7 @@ const Z_STACK = ['z-[5]', 'z-[4]', 'z-[3]', 'z-[2]', 'z-[1]'] as const;
 const getInitials = (name: string) =>
 	name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
 
-const GroupDetailsBar = ({ groupId, groupName, category, description = '', dateRange, location, memberNames = [], onGroupUpdated }: Props) => {
+const GroupDetailsBar = ({ groupId, groupName, category, description = '', dateRange, location, memberNames = [], isOwner, onGroupUpdated, onGroupDeleted }: Props) => {
 	const [isModalOpen, setIsModalOpen] = useState(false);
 	const [isEditOpen, setIsEditOpen] = useState(false);
 	const visible = memberNames.slice(0, MAX_VISIBLE);
@@ -44,9 +46,10 @@ const GroupDetailsBar = ({ groupId, groupName, category, description = '', dateR
 				initialName={groupName}
 				initialCategory={category}
 				initialDescription={description}
+				isOwner={isOwner}
 				onGroupUpdated={onGroupUpdated}
-			/>
-
+				onGroupDeleted={onGroupDeleted}
+			></EditGroupModal>
 			{/* Breadcrumb */}
 			<nav className="flex items-center gap-1.5 text-sm mb-4">
 				<Link to="/groups" className="text-slate-400 hover:text-slate-600 transition-colors font-medium">

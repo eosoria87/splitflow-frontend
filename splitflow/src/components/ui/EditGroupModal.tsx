@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { CheckIcon, XMarkIcon, PencilIcon, Squares2X2Icon } from "@heroicons/react/24/solid";
 import Button from "./Button";
 import Dropdown from "./Dropdown";
+import DeleteGroupSection from "./DeleteGroupSection";
 import groupService from "../../services/groupService";
 
 const GROUP_CATEGORIES = [
@@ -19,7 +20,9 @@ interface Props {
 	initialName: string;
 	initialCategory: string;
 	initialDescription?: string;
+	isOwner: boolean;
 	onGroupUpdated: () => void;
+	onGroupDeleted: () => void;
 }
 
 const EditGroupModal = ({
@@ -29,7 +32,9 @@ const EditGroupModal = ({
 	initialName,
 	initialCategory,
 	initialDescription = '',
+	isOwner,
 	onGroupUpdated,
+	onGroupDeleted,
 }: Props) => {
 	const [name, setName] = useState(initialName);
 	const [category, setCategory] = useState(initialCategory);
@@ -134,6 +139,13 @@ const EditGroupModal = ({
 							className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-colors resize-none"
 						/>
 					</div>
+
+					<DeleteGroupSection
+						groupId={groupId}
+						groupName={initialName}
+					isOwner={isOwner}
+					onGroupDeleted={onGroupDeleted}
+					/>
 				</div>
 
 				{/* Footer */}
