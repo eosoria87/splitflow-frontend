@@ -6,6 +6,8 @@ import type { DebtSettlement } from '../types/Debt';
 export interface GroupCache {
   groupName: string;
   category: string;
+  description: string;
+  userRole: string;
   createdAt: string;
   membersCount: number;
   memberNames: string[];
@@ -118,6 +120,8 @@ export const buildGroupCache = async (
   const cache: GroupCache = {
     groupName: '',
     category: 'other',
+    description: '',
+    userRole: '',
     createdAt: '',
     membersCount: 0,
     memberNames: [],
@@ -133,6 +137,8 @@ export const buildGroupCache = async (
     const g = groupRes.value;
     cache.groupName = g.name;
     cache.category = g.category || 'other';
+    cache.description = g.description || '';
+    cache.userRole = g.userRole || '';
     cache.createdAt = g.created_at;
     cache.membersCount = g.members.length;
     cache.memberNames = g.members.map(m => m.name);

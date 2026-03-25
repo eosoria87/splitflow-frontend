@@ -1,12 +1,20 @@
 import { apiClient } from "../utils/apiClient";
-import type { Group } from "./groupService";
+import type { RawExpense, BalanceEntry } from "./groupService";
 
-export interface FlowInsights {
-	monthlySpend: number;
-	spendChange: number | null;
-	topDebtGroupName: string;
-	settledPercentage: number;
-	recoveredPercentage: number;
+export const BALANCE_CACHE_KEY = 'sf_balance';
+
+// ── Types ────────────────────────────────────────────────────────────────────
+
+interface RawGroup {
+	id: string;
+	name: string;
+	category: string;
+}
+
+interface RawSettlement {
+	from_user: string;
+	to_user: string;
+	amount: number;
 }
 
 export interface GroupBalanceData {
@@ -17,288 +25,279 @@ export interface GroupBalanceData {
 	type: 'owed-to-me' | 'i-owe';
 }
 
-export interface GroupBalancesResult {
-	owedToMe: GroupBalanceData[];
-	iOwe: GroupBalanceData[];
-	totalOwedToMe: number;
-	totalIOwe: number;
-}
-
 export interface PersonBalanceData {
-	id: string; // The other user's ID
+	id: string;
 	name: string;
 	amount: number;
 	type: 'owed-to-me' | 'i-owe';
 }
 
-export interface PersonBalancesResult {
-	owedToMe: PersonBalanceData[];
-	iOwe: PersonBalanceData[];
-	totalOwedToMe: number;
-	totalIOwe: number;
+export interface FlowInsights {
+	monthlySpend: number;
+	spendChange: number | null;
+	topDebtGroupName: string;
+	settledPercentage: number;
+	recoveredPercentage: number;
 }
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+// Replicates the backend's greedy settlement optimization so we can compute
+// the "By Person" view from already-fetched balance data without an extra API call.
+function optimizeSettlements(balances: BalanceEntry[]) {
+	const creditors = balances
+		.filter(b => b.netBalance > 0.01)
+		.map(b => ({ ...b, remaining: b.netBalance }))
+		.sort((a, b) => b.remaining - a.remaining);
+
+	const debtors = balances
+		.filter(b => b.netBalance < -0.01)
+		.map(b => ({ ...b, remaining: Math.abs(b.netBalance) }))
+		.sort((a, b) => b.remaining - a.remaining);
+
+	const settlements: { from: string; fromName: string; to: string; toName: string; amount: number }[] = [];
+	let i = 0, j = 0;
+
+	while (i < debtors.length && j < creditors.length) {
+		const amount = Math.min(debtors[i].remaining, creditors[j].remaining);
+		if (amount > 0.01) {
+			settlements.push({
+				from: debtors[i].userId, fromName: debtors[i].name,
+				to: creditors[j].userId, toName: creditors[j].name,
+				amount: parseFloat(amount.toFixed(2)),
+			});
+		}
+		debtors[i].remaining -= amount;
+		creditors[j].remaining -= amount;
+		if (debtors[i].remaining < 0.01) i++;
+		if (creditors[j].remaining < 0.01) j++;
+	}
+
+	return settlements;
+}
+
+// ── Service ───────────────────────────────────────────────────────────────────
 
 export const balanceService = {
 
-	getBalancesByGroup: async (currentUserId: string): Promise<GroupBalancesResult> => {
+	// Fetch the list of groups the user belongs to
+	getGroups: async (): Promise<RawGroup[]> => {
 		try {
-			const groupsResponse = await apiClient.get('/groups');
-			const groups = groupsResponse.data.groups;
-
-			const owedToMe: GroupBalanceData[] = [];
-			const iOwe: GroupBalanceData[] = [];
-			let totalOwedToMe = 0;
-			let totalIOwe = 0;
-
-			if (!groups || groups.length === 0) {
-				return { owedToMe, iOwe, totalOwedToMe, totalIOwe };
-			}
-
-			const balancePromises = groups.map((g: Group) => apiClient.get(`/groups/${g.id}/balances`));
-			const balanceResponses = await Promise.allSettled(balancePromises);
-
-			balanceResponses.forEach((res, index) => {
-				if (res.status === 'fulfilled' && res.value.data.balances) {
-					const group = groups[index];
-
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					const yourBalance = res.value.data.balances.find((b: any) => b.userId === currentUserId);
-
-					if (yourBalance) {
-						const net = yourBalance.netBalance;
-
-						if (net > 0) {
-							owedToMe.push({
-								id: group.id,
-								name: group.name,
-								category: group.category || 'other',
-								amount: net,
-								type: 'owed-to-me'
-							});
-							totalOwedToMe += net;
-						} else if (net < 0) {
-							iOwe.push({
-								id: group.id,
-								name: group.name,
-								category: group.category || 'other',
-								amount: Math.abs(net), // UI expects positive numbers!
-								type: 'i-owe'
-							});
-							totalIOwe += Math.abs(net);
-						}
-					}
-				}
-			});
-
-			return { owedToMe, iOwe, totalOwedToMe, totalIOwe };
-
-		} catch (error) {
-			console.error("Axios error fetching group balances:", error);
-			return { owedToMe: [], iOwe: [], totalOwedToMe: 0, totalIOwe: 0 };
+			const res = await apiClient.get('/groups');
+			return res.data.groups ?? [];
+		} catch {
+			return [];
 		}
 	},
 
-	getBalancesByPerson: async (currentUserId: string): Promise<PersonBalancesResult> => {
-		try {
-			const groupsResponse = await apiClient.get('/groups');
-			const groups = groupsResponse.data.groups;
-
-			if (!groups || groups.length === 0) {
-				return { owedToMe: [], iOwe: [], totalOwedToMe: 0, totalIOwe: 0 };
-			}
-
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			const suggestionPromises = groups.map((g: any) => apiClient.get(`/groups/${g.id}/settlements/suggestions`));
-			const suggestionResponses = await Promise.allSettled(suggestionPromises);
-
-			const personLedger: Record<string, { name: string, netAmount: number }> = {};
-
-			suggestionResponses.forEach((res) => {
-				if (res.status === 'fulfilled' && res.value.data.settlements) {
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					res.value.data.settlements.forEach((settlement: any) => {
-
-						// Scenario A: Someone owes YOU money
-						if (settlement.to === currentUserId) {
-							const debtorId = settlement.from;
-							if (!personLedger[debtorId]) personLedger[debtorId] = { name: settlement.from_name, netAmount: 0 };
-							personLedger[debtorId].netAmount += settlement.amount;
-						}
-
-						// Scenario B: YOU owe someone money
-						if (settlement.from === currentUserId) {
-							const creditorId = settlement.to;
-							if (!personLedger[creditorId]) personLedger[creditorId] = { name: settlement.to_name, netAmount: 0 };
-							personLedger[creditorId].netAmount -= settlement.amount;
-						}
-					});
-				}
-			});
-
-			const owedToMe: PersonBalanceData[] = [];
-			const iOwe: PersonBalanceData[] = [];
-			let totalOwedToMe = 0;
-			let totalIOwe = 0;
-
-			Object.entries(personLedger).forEach(([personId, data]) => {
-				if (data.netAmount > 0.01) {
-					owedToMe.push({
-						id: personId,
-						name: data.name,
-						amount: data.netAmount,
-						type: 'owed-to-me'
-					});
-					totalOwedToMe += data.netAmount;
-				} else if (data.netAmount < -0.01) {
-					iOwe.push({
-						id: personId,
-						name: data.name,
-						amount: Math.abs(data.netAmount),
-						type: 'i-owe'
-					});
-					totalIOwe += Math.abs(data.netAmount);
-				}
-			});
-
-			return { owedToMe, iOwe, totalOwedToMe, totalIOwe };
-
-		} catch (error) {
-			console.error("Axios error fetching person balances:", error);
-			return { owedToMe: [], iOwe: [], totalOwedToMe: 0, totalIOwe: 0 };
-		}
+	// Fetch balances for all groups in a single parallel batch
+	getGroupBalancesMap: async (groups: RawGroup[]): Promise<Record<string, BalanceEntry[]>> => {
+		if (!groups.length) return {};
+		const results = await Promise.allSettled(
+			groups.map(g => apiClient.get(`/groups/${g.id}/balances`))
+		);
+		const map: Record<string, BalanceEntry[]> = {};
+		results.forEach((res, idx) => {
+			map[groups[idx].id] = res.status === 'fulfilled' ? (res.value.data.balances ?? []) : [];
+		});
+		return map;
 	},
 
-	getFlowInsights: async (currentUserId: string): Promise<FlowInsights> => {
-		try {
-			// 1. Fetch all groups
-			const groupsResponse = await apiClient.get('/groups');
-			const groups = groupsResponse.data.groups;
+	// Fetch expenses for all groups in a single parallel batch
+	getGroupExpensesMap: async (groups: RawGroup[]): Promise<Record<string, RawExpense[]>> => {
+		if (!groups.length) return {};
+		const results = await Promise.allSettled(
+			groups.map(g => apiClient.get(`/groups/${g.id}/expenses`))
+		);
+		const map: Record<string, RawExpense[]> = {};
+		results.forEach((res, idx) => {
+			map[groups[idx].id] = res.status === 'fulfilled' ? (res.value.data.expenses ?? []) : [];
+		});
+		return map;
+	},
 
-			if (!groups || groups.length === 0) {
-				return { monthlySpend: 0, spendChange: null, topDebtGroupName: 'None', settledPercentage: 0, recoveredPercentage: 0 };
+	// Fetch settlement history for all groups in a single parallel batch
+	getGroupSettlementsMap: async (groups: RawGroup[]): Promise<Record<string, RawSettlement[]>> => {
+		if (!groups.length) return {};
+		const results = await Promise.allSettled(
+			groups.map(g => apiClient.get(`/groups/${g.id}/settlements`))
+		);
+		const map: Record<string, RawSettlement[]> = {};
+		results.forEach((res, idx) => {
+			map[groups[idx].id] = res.status === 'fulfilled' ? (res.value.data.settlements ?? []) : [];
+		});
+		return map;
+	},
+
+	// Pure compute — group view (owed to me / I owe, grouped by group)
+	computeGroupView: (
+		userId: string,
+		groups: RawGroup[],
+		balancesMap: Record<string, BalanceEntry[]>,
+	): { owedToMe: GroupBalanceData[]; iOwe: GroupBalanceData[] } => {
+		const owedToMe: GroupBalanceData[] = [];
+		const iOwe: GroupBalanceData[] = [];
+
+		groups.forEach(group => {
+			const myBalance = (balancesMap[group.id] ?? []).find(b => b.userId === userId);
+			if (!myBalance) return;
+			const net = myBalance.netBalance;
+			if (net > 0.01) {
+				owedToMe.push({ id: group.id, name: group.name, category: group.category || 'other', amount: net, type: 'owed-to-me' });
+			} else if (net < -0.01) {
+				iOwe.push({ id: group.id, name: group.name, category: group.category || 'other', amount: Math.abs(net), type: 'i-owe' });
+			}
+		});
+
+		return { owedToMe, iOwe };
+	},
+
+	// Pure compute — person view (net amounts aggregated across all groups, per person)
+	// Derives settlement suggestions from already-fetched balances — no extra API call.
+	computePersonView: (
+		userId: string,
+		balancesMap: Record<string, BalanceEntry[]>,
+	): { owedToMe: PersonBalanceData[]; iOwe: PersonBalanceData[] } => {
+		const ledger: Record<string, { name: string; netAmount: number }> = {};
+
+		Object.values(balancesMap).forEach(balances => {
+			optimizeSettlements(balances).forEach(s => {
+				if (s.to === userId) {
+					if (!ledger[s.from]) ledger[s.from] = { name: s.fromName, netAmount: 0 };
+					ledger[s.from].netAmount += s.amount;
+				}
+				if (s.from === userId) {
+					if (!ledger[s.to]) ledger[s.to] = { name: s.toName, netAmount: 0 };
+					ledger[s.to].netAmount -= s.amount;
+				}
+			});
+		});
+
+		const owedToMe: PersonBalanceData[] = [];
+		const iOwe: PersonBalanceData[] = [];
+
+		Object.entries(ledger).forEach(([pid, data]) => {
+			if (data.netAmount > 0.01) {
+				owedToMe.push({ id: pid, name: data.name, amount: data.netAmount, type: 'owed-to-me' });
+			} else if (data.netAmount < -0.01) {
+				iOwe.push({ id: pid, name: data.name, amount: Math.abs(data.netAmount), type: 'i-owe' });
+			}
+		});
+
+		return { owedToMe, iOwe };
+	},
+
+	// Pure compute — flow insights from already-fetched maps, no API calls
+	computeInsights: (
+		userId: string,
+		groups: RawGroup[],
+		balancesMap: Record<string, BalanceEntry[]>,
+		expensesMap: Record<string, RawExpense[]>,
+		settlementsMap: Record<string, RawSettlement[]>,
+	): FlowInsights => {
+		const now = new Date();
+		const curMonth = now.getMonth(), curYear = now.getFullYear();
+		const lastMonthDate = new Date(curYear, curMonth - 1, 1);
+		const lastMonth = lastMonthDate.getMonth(), lastMonthYear = lastMonthDate.getFullYear();
+
+		let currentMonthSpend = 0, lastMonthSpend = 0;
+		let totalCurrentlyOwedToMe = 0, totalCurrentlyIOwe = 0;
+		let highestDebt = 0, topDebtGroupName = 'None';
+		let totalSettlementsReceived = 0, totalSettlementsSent = 0;
+
+		groups.forEach(group => {
+			const myBalance = (balancesMap[group.id] ?? []).find(b => b.userId === userId);
+			if (myBalance) {
+				const net = myBalance.netBalance;
+				if (net > 0) {
+					totalCurrentlyOwedToMe += net;
+				} else if (net < 0) {
+					const abs = Math.abs(net);
+					totalCurrentlyIOwe += abs;
+					if (abs > highestDebt) { highestDebt = abs; topDebtGroupName = group.name; }
+				}
 			}
 
-			// 2. Fetch EVERYTHING we need in parallel
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			const expensePromises = groups.map((g: any) => apiClient.get(`/groups/${g.id}/expenses`));
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			const settlementPromises = groups.map((g: any) => apiClient.get(`/groups/${g.id}/settlements`));
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			const balancePromises = groups.map((g: any) => apiClient.get(`/groups/${g.id}/balances`));
-
-			const [expenseRes, settlementRes, balanceRes] = await Promise.all([
-				Promise.allSettled(expensePromises),
-				Promise.allSettled(settlementPromises),
-				Promise.allSettled(balancePromises)
-			]);
-
-			// Variables for our math
-			let currentMonthSpend = 0;
-			let lastMonthSpend = 0;
-
-			let totalSettlementsReceived = 0;
-			let totalSettlementsSent = 0;
-
-			let totalCurrentlyOwedToMe = 0;
-			let totalCurrentlyIOwe = 0;
-
-			let highestDebt = 0;
-			let topDebtGroupName = 'None';
-
-			const now = new Date();
-			const currentMonth = now.getMonth();
-			const currentYear = now.getFullYear();
-
-			const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-			const lastMonth = lastMonthDate.getMonth();
-			const lastMonthYear = lastMonthDate.getFullYear();
-
-			// --- A. Calculate Spend ---
-			expenseRes.forEach((res) => {
-				if (res.status === 'fulfilled' && res.value.data.expenses) {
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					res.value.data.expenses.forEach((expense: any) => {
-						const expenseDate = new Date(expense.date || expense.created_at);
-						const isCurrentMonth = expenseDate.getMonth() === currentMonth && expenseDate.getFullYear() === currentYear;
-						const isLastMonth = expenseDate.getMonth() === lastMonth && expenseDate.getFullYear() === lastMonthYear;
-
-						if (isCurrentMonth || isLastMonth) {
-							// Find your exact share of the expense
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-							const myParticipantRecord = expense.participants.find((p: any) => p.user_id === currentUserId);
-							const myShare = myParticipantRecord ? myParticipantRecord.share : 0;
-
-							if (isCurrentMonth) currentMonthSpend += myShare;
-							if (isLastMonth) lastMonthSpend += myShare;
-						}
-					});
-				}
+			(expensesMap[group.id] ?? []).forEach(expense => {
+				const rawDate = (expense.date || expense.created_at).substring(0, 10);
+				const [expYear, expMonth] = rawDate.split('-').map(Number);
+				const myPart = expense.participants.find(p => p.user_id === userId);
+				const myShare = myPart ? myPart.share : 0;
+				if (expMonth - 1 === curMonth && expYear === curYear) currentMonthSpend += myShare;
+				if (expMonth - 1 === lastMonth && expYear === lastMonthYear) lastMonthSpend += myShare;
 			});
 
-			// --- B. Calculate Settlements (History) ---
-			settlementRes.forEach((res) => {
-				if (res.status === 'fulfilled' && res.value.data.settlements) {
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					res.value.data.settlements.forEach((settlement: any) => {
-						if (settlement.to_user === currentUserId) totalSettlementsReceived += settlement.amount;
-						if (settlement.from_user === currentUserId) totalSettlementsSent += settlement.amount;
-					});
-				}
+			(settlementsMap[group.id] ?? []).forEach(s => {
+				if (s.to_user === userId) totalSettlementsReceived += s.amount;
+				if (s.from_user === userId) totalSettlementsSent += s.amount;
 			});
+		});
 
-			// --- C. Calculate Balances & Top Debt Group ---
-			balanceRes.forEach((res, index) => {
-				if (res.status === 'fulfilled' && res.value.data.balances) {
-					const group = groups[index];
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					const myBalance = res.value.data.balances.find((b: any) => b.userId === currentUserId);
+		let spendChange: number | null = null;
+		if (lastMonthSpend > 0) spendChange = ((currentMonthSpend - lastMonthSpend) / lastMonthSpend) * 100;
+		else if (currentMonthSpend > 0) spendChange = 100;
 
-					if (myBalance) {
-						const net = myBalance.netBalance;
-						if (net > 0) {
-							totalCurrentlyOwedToMe += net;
-						} else if (net < 0) {
-							const debtAmount = Math.abs(net);
-							totalCurrentlyIOwe += debtAmount;
+		const totalHistoricalOwedToMe = totalCurrentlyOwedToMe + totalSettlementsReceived;
+		let recoveredPercentage = 0;
+		if (totalHistoricalOwedToMe > 0) recoveredPercentage = (totalSettlementsReceived / totalHistoricalOwedToMe) * 100;
+		else if (totalCurrentlyOwedToMe === 0 && totalSettlementsReceived > 0) recoveredPercentage = 100;
 
-							// Track the group where you owe the most
-							if (debtAmount > highestDebt) {
-								highestDebt = debtAmount;
-								topDebtGroupName = group.name;
-							}
-						}
-					}
-				}
-			});
+		const totalHistoricalIOwe = totalCurrentlyIOwe + totalSettlementsSent;
+		let settledPercentage = 0;
+		if (totalHistoricalIOwe > 0) settledPercentage = (totalSettlementsSent / totalHistoricalIOwe) * 100;
+		else if (totalCurrentlyIOwe === 0 && totalSettlementsSent > 0) settledPercentage = 100;
 
-			// --- D. Final Percentages Math ---
-			let spendChange: number | null = null;
-			if (lastMonthSpend > 0) spendChange = ((currentMonthSpend - lastMonthSpend) / lastMonthSpend) * 100;
-			else if (currentMonthSpend > 0 && lastMonthSpend === 0) spendChange = 100;
+		return {
+			monthlySpend: parseFloat(currentMonthSpend.toFixed(2)),
+			spendChange: spendChange !== null ? parseFloat(spendChange.toFixed(1)) : null,
+			topDebtGroupName,
+			settledPercentage: Math.round(settledPercentage),
+			recoveredPercentage: Math.round(recoveredPercentage),
+		};
+	},
+};
 
-			// Recovered % (Credits received vs Total Credits)
-			const totalHistoricalOwedToMe = totalCurrentlyOwedToMe + totalSettlementsReceived;
-			let recoveredPercentage = 0;
-			if (totalHistoricalOwedToMe > 0) recoveredPercentage = (totalSettlementsReceived / totalHistoricalOwedToMe) * 100;
-			else if (totalCurrentlyOwedToMe === 0 && totalSettlementsReceived > 0) recoveredPercentage = 100;
+// ── Shared fetch ──────────────────────────────────────────────────────────────
+// A single in-flight promise shared between the auto-start prefetch and the page.
+// This prevents duplicate requests when both fire at the same time.
 
-			// Settled % (Debts paid vs Total Debts)
-			const totalHistoricalIOwe = totalCurrentlyIOwe + totalSettlementsSent;
-			let settledPercentage = 0;
-			if (totalHistoricalIOwe > 0) settledPercentage = (totalSettlementsSent / totalHistoricalIOwe) * 100;
-			else if (totalCurrentlyIOwe === 0 && totalSettlementsSent > 0) settledPercentage = 100;
+export interface BalancePageData {
+	groupView:  { owedToMe: GroupBalanceData[]; iOwe: GroupBalanceData[] };
+	personView: { owedToMe: PersonBalanceData[]; iOwe: PersonBalanceData[] };
+	insights:   FlowInsights;
+}
 
-			return {
-				monthlySpend: currentMonthSpend,
-				spendChange,
-				topDebtGroupName,
-				settledPercentage: Math.round(settledPercentage),
-				recoveredPercentage: Math.round(recoveredPercentage)
-			};
+let inflightFetch: Promise<BalancePageData> | null = null;
 
-		} catch (error) {
-			console.error("Error fetching flow insights:", error);
-			return { monthlySpend: 0, spendChange: null, topDebtGroupName: 'None', settledPercentage: 0, recoveredPercentage: 0 };
+async function fetchAndCache(userId: string): Promise<BalancePageData> {
+	const groups = await balanceService.getGroups();
+	const [balancesMap, expensesMap, settlementsMap] = await Promise.all([
+		balanceService.getGroupBalancesMap(groups),
+		balanceService.getGroupExpensesMap(groups),
+		balanceService.getGroupSettlementsMap(groups),
+	]);
+	const groupView  = balanceService.computeGroupView(userId, groups, balancesMap);
+	const personView = balanceService.computePersonView(userId, balancesMap);
+	const insights   = balanceService.computeInsights(userId, groups, balancesMap, expensesMap, settlementsMap);
+	sessionStorage.setItem(BALANCE_CACHE_KEY, JSON.stringify({ groupView, personView, insights }));
+	return { groupView, personView, insights };
+}
+
+// Called by the page — reuses the in-flight prefetch if already running.
+export const getBalanceData = (userId: string): Promise<BalancePageData> => {
+	if (!inflightFetch) {
+		inflightFetch = fetchAndCache(userId).finally(() => { inflightFetch = null; });
+	}
+	return inflightFetch;
+};
+
+// Auto-start: fires as soon as this module loads (at app startup).
+try {
+	const userRaw = localStorage.getItem('sf_user');
+	if (userRaw) {
+		const userId = JSON.parse(userRaw).id;
+		if (!sessionStorage.getItem(BALANCE_CACHE_KEY)) {
+			inflightFetch = fetchAndCache(userId).finally(() => { inflightFetch = null; });
 		}
 	}
-};
+} catch { /* silent */ }
