@@ -29,11 +29,30 @@ const EditExpenseModal = ({ expense, onClose }: Props) => {
 	const [category, setCategory] = useState<string>(expense.category);
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+	const [isDeleting, setIsDeleting] = useState(false);
+	const [deleteError, setDeleteError] = useState<string | null>(null);
 
 	const isFormValid =
 		description.trim() !== '' &&
 		!!amount && !isNaN(parseFloat(amount)) && parseFloat(amount) > 0 &&
 		date !== '';
+
+	const handleDelete = async () => {
+		if (!groupId) return;
+		setDeleteError(null);
+		setIsDeleting(true);
+		try {
+			await apiClient.delete(`/groups/${groupId}/expenses/${expense.id}`);
+			sessionStorage.removeItem(`sf_group_${groupId}`);
+			window.dispatchEvent(new CustomEvent('expense-added', { detail: { groupId } }));
+			onClose();
+		} catch (err: unknown) {
+			setDeleteError(err instanceof Error ? err.message : 'Failed to delete expense. Please try again.');
+		} finally {
+			setIsDeleting(false);
+		}
+	};
 
 	const handleSave = async () => {
 		if (!groupId) return;
@@ -155,6 +174,45 @@ const EditExpenseModal = ({ expense, onClose }: Props) => {
 						</div>
 
 					</div>
+
+				{/* --- DANGER ZONE --- */}
+				<div className="border-t border-red-100 pt-5 mt-2">
+					<p className="text-[10px] font-bold text-red-400 uppercase tracking-widest mb-3">Danger Zone</p>
+					{!isConfirmingDelete ? (
+						<button
+							onClick={() => setIsConfirmingDelete(true)}
+							className="text-sm font-semibold text-red-500 hover:text-red-600 hover:bg-red-50 px-4 py-2 rounded-xl transition-colors border border-red-200"
+						>
+							Delete Expense
+						</button>
+					) : (
+						<div className="bg-red-50 border border-red-100 rounded-xl p-4 space-y-3">
+							<p className="text-sm text-slate-700">
+								Are you sure you want to delete <span className="font-bold">"{expense.title}"</span>? This action cannot be undone.
+							</p>
+							{deleteError && <p className="text-sm text-red-500 font-medium">{deleteError}</p>}
+							<div className="flex gap-2">
+								<Button variant="outline" onClick={() => setIsConfirmingDelete(false)} disabled={isDeleting} className="py-2">
+									Cancel
+								</Button>
+								<button
+									onClick={handleDelete}
+									disabled={isDeleting}
+									className="px-4 py-2 bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-colors flex items-center gap-2"
+								>
+									{isDeleting && (
+										<svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+											<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+											<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z" />
+										</svg>
+									)}
+									{isDeleting ? 'Deleting...' : 'Yes, delete'}
+								</button>
+							</div>
+						</div>
+					)}
+				</div>
+
 				</div>
 
 				{/* --- FOOTER --- */}
