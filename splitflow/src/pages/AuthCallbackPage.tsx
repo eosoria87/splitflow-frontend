@@ -1,18 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import Logo from '../components/ui/Logo';
 import FooterBar from '../components/layout/FooterBar';
 
 const AuthCallbackPage = () => {
-  const [searchParams] = useSearchParams();
   const { loginWithOAuth } = useAuth();
   const navigate = useNavigate();
   const hasRun = useRef(false);
 
-  const accessToken = searchParams.get('access_token');
-  const refreshToken = searchParams.get('refresh_token');
-  const expiresAt = searchParams.get('expires_at');
+  const hash = new URLSearchParams(window.location.hash.replace('#', ''));
+  const accessToken = hash.get('access_token');
+  const refreshToken = hash.get('refresh_token');
+  const expiresAt = hash.get('expires_at');
 
   const [error, setError] = useState<string | null>(
     !accessToken || !refreshToken || !expiresAt
