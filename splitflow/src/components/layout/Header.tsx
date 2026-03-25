@@ -6,7 +6,7 @@ import AddExpenseModal from '../ui/AddExpenseModal';
 
 interface Props extends React.PropsWithChildren {
 	title: string;
-	subtitle?: string;
+	subtitle?: React.ReactNode;
 	icon?: React.ReactNode;
 	customAction?: React.ReactNode;
 	hideAction?: boolean;

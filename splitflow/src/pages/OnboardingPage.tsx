@@ -21,7 +21,7 @@ const OnboardingPage = () => {
 	};
 	return (
 		<div className="h-[calc(100vh-4rem)] flex flex-col w-full">
-			<NavBarOnboarding onClick={() => navigate('/login')} />
+			<NavBarOnboarding onClick={() => navigate('/login')} onSignUp={() => navigate('/signup')} />
 			<div className="flex-1 sm:w-full flex flex-col items-center p-6">
 				<div className="rounded-4xl flex-1 flex items-center justify-center w-full overflow-hidden">
 					<AnimatePresence mode="wait">

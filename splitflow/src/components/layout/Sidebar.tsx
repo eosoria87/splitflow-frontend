@@ -16,7 +16,7 @@ const Sidebar = () => {
 	return (
 		<aside className="hidden xl:flex w-64 shrink-0 sticky top-0 h-screen overflow-y-auto bg-slate-50 border-r border-slate-200 flex-col">
 
-			<div className="p-8 pb-6">
+			<div className="px-4 py-2">
 				<div className="font-bold text-xl text-slate-900 tracking-tight flex items-center gap-2">
 					<Logo/>
 				</div>
