@@ -38,6 +38,12 @@ const EditExpenseModal = ({ expense, onClose }: Props) => {
 		!!amount && !isNaN(parseFloat(amount)) && parseFloat(amount) > 0 &&
 		date !== '';
 
+	const hasChanges =
+		description.trim() !== expense.title.trim() ||
+		parseFloat(amount) !== expense.totalAmount ||
+		date !== expense.date.substring(0, 10) ||
+		category !== expense.category;
+
 	const handleDelete = async () => {
 		if (!groupId) return;
 		setDeleteError(null);
@@ -224,7 +230,7 @@ const EditExpenseModal = ({ expense, onClose }: Props) => {
 						<Button variant="outline" onClick={onClose} disabled={isLoading} className="py-2.5">
 							Cancel
 						</Button>
-						<Button variant="primary" onClick={handleSave} disabled={isLoading || !isFormValid} className="py-2.5 flex items-center gap-2">
+						<Button variant="primary" onClick={handleSave} disabled={isLoading || !isFormValid || !hasChanges} className="py-2.5 flex items-center gap-2">
 							{isLoading ? (
 								<svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
 									<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
