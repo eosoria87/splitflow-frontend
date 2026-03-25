@@ -27,7 +27,7 @@ const GroupGrid = ({ groups, isLoading = false }: Props) => {
 					Array.from({ length: 3 }).map((_, index) => (
 						<div
 							key={index}
-							className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm flex flex-col justify-between min-h-[150px]"
+							className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm flex flex-col justify-between min-h-37.5"
 						>
 							<div className="flex justify-between items-start mb-4">
 								{/* Icon Skeleton */}
@@ -57,6 +57,7 @@ const GroupGrid = ({ groups, isLoading = false }: Props) => {
 								icon={<Icon className="w-5 h-5" />}
 								iconBgClass={config.color}
 								status={group.status}
+								amount={group.amount}
 								memberNames={loadGroupCache(group.id)?.memberNames ?? []}
 							/>
 						);

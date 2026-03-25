@@ -1,36 +1,60 @@
+import { ArrowTrendingDownIcon, ArrowTrendingUpIcon, CheckBadgeIcon } from '@heroicons/react/24/outline';
+
 interface Props {
 	balance: number;
 }
 
 const GroupBalanceCard = ({ balance }: Props) => {
-	const isOwed = balance >= 0;
+	const isSettled = balance === 0;
+	const isOwed    = balance > 0;
 	const displayAmount = Math.abs(balance).toFixed(2);
 
+	if (isSettled) {
+		return (
+			<div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm flex items-center gap-4">
+				<div className="w-11 h-11 bg-teal-50 rounded-2xl flex items-center justify-center shrink-0">
+					<CheckBadgeIcon className="w-6 h-6 text-teal-500" />
+				</div>
+				<div className="text-left">
+					<p className="text-sm font-bold text-slate-900">All settled up</p>
+					<p className="text-xs text-slate-400 mt-0.5">No pending balance in this group.</p>
+				</div>
+			</div>
+		);
+	}
+
 	return (
-		<div className={`relative overflow-hidden rounded-3xl p-6 md:p-8 text-white shadow-xl transition-all ${isOwed
-				? 'bg-primary'
-				: 'bg-[#ef4444]'
-			}`}>
+		<div className={`relative overflow-hidden rounded-3xl p-6 text-white shadow-sm ${isOwed ? 'bg-primary' : 'bg-orange-500'}`}>
 
-			{/* Decorative background glows */}
-			<div className="absolute bottom-0 right-0 -mb-8 -ml-8 w-32 h-32 bg-black opacity-10 rounded-full blur-2xl pointer-events-none"></div>
+			{/* Decorative blobs */}
+			<div className="absolute -top-6 -right-6 w-28 h-28 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+			<div className="absolute -bottom-8 -left-4 w-24 h-24 bg-black/10 rounded-full blur-2xl pointer-events-none" />
 
-			<div className="relative z-10 divide-y divide-secondary/50">
-				{/* Header */}
-				<div>
-					<p className="text-sm sm:text-left font-medium opacity-90 mb-1 tracking-wide">
-						{isOwed ? 'You are owed' : 'You owe the group'}
-					</p>
+			<div className="relative z-10">
 
-					{/* Huge Balance Number */}
-					<h2 className="text-4xl sm:text-left md:text-5xl font-medium tracking-tight mb-8">
-						{isOwed ? '+' : '-'}${displayAmount}
-					</h2>
+				{/* Status badge */}
+				<div className="inline-flex items-center gap-1.5 bg-white/15 rounded-full px-3 py-1 mb-4">
+					{isOwed
+						? <ArrowTrendingUpIcon className="w-3.5 h-3.5" />
+						: <ArrowTrendingDownIcon className="w-3.5 h-3.5" />
+					}
+					<span className="text-[11px] font-bold uppercase tracking-wider">
+						{isOwed ? 'You are owed' : 'You owe'}
+					</span>
 				</div>
-				<div className="flex items-center justify-between py-2">
-	
-					<p className=" text-white/50 text-md">You are owed in total. Good job traking!</p>
-				</div>
+
+				{/* Amount */}
+				<p className="text-4xl font-bold tracking-tight">
+					{isOwed ? '+' : '-'}${displayAmount}
+				</p>
+
+				{/* Subtitle */}
+				<p className="text-sm text-white mt-3">
+					{isOwed
+						? 'The group owes you this amount.'
+						: 'You owe the group this amount.'}
+				</p>
+
 			</div>
 		</div>
 	);

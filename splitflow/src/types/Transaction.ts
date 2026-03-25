@@ -5,11 +5,13 @@ export type TransactionStatus = 'you owe' | 'you lent' | 'not involved';
 export interface GroupTransaction {
 	id: string;
 	title: string;
-	category: TransactionCategory; 
+	category: TransactionCategory;
 	paidBy: string;
+	paidById: string;
+	date: string;
 	totalAmount: number;
 	splitDetails: string;
-	userNetChange: number; 
+	userNetChange: number;
 	userStatus: TransactionStatus;
 }
 

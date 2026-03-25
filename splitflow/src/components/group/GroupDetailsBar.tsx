@@ -52,7 +52,7 @@ const GroupDetailsBar = ({ groupId, groupName, category, description = '', dateR
 			></EditGroupModal>
 			{/* Breadcrumb */}
 			<nav className="flex items-center gap-1.5 text-sm mb-4">
-				<Link to="/groups" className="text-slate-400 hover:text-slate-600 transition-colors font-medium">
+				<Link to="/dashboard" className="text-slate-400 hover:text-slate-600 transition-colors font-medium">
 					Groups
 				</Link>
 				<span className="text-slate-300">/</span>
@@ -112,10 +112,12 @@ const GroupDetailsBar = ({ groupId, groupName, category, description = '', dateR
 					)}
 
 					{/* Action Buttons */}
-					<Button variant="outline" onClick={() => setIsEditOpen(true)} className="flex items-center gap-2 py-2 px-4">
-						<PencilIcon className="w-4 h-4" />
-						<span className="hidden sm:inline">Edit</span>
-					</Button>
+					{isOwner && (
+						<Button variant="outline" onClick={() => setIsEditOpen(true)} className="flex items-center gap-2 py-2 px-4">
+							<PencilIcon className="w-4 h-4" />
+							<span className="hidden sm:inline">Edit</span>
+						</Button>
+					)}
 					<Button variant="primary" onClick={() => setIsModalOpen(true)} className="flex items-center gap-2 py-2 px-4">
 						<PlusIcon className="w-4 h-4" />
 						<span className="hidden sm:inline">Add Expense</span>

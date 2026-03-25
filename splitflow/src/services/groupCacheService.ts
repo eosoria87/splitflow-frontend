@@ -177,6 +177,8 @@ export const buildGroupCache = async (
             title: exp.description,
             category: mapCategory(exp.category),
             paidBy: exp.payer_name,
+            paidById: exp.paid_by,
+            date: exp.date,
             totalAmount: exp.amount,
             splitDetails: `Split ${exp.participants_count} ways`,
             userNetChange,

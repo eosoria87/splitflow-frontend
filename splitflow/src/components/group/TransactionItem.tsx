@@ -4,9 +4,10 @@ import type { GroupTransaction } from "../../types/Transaction";
 
 interface Props {
 	tx: GroupTransaction;
+	onClick?: () => void;
 }
 
-const TransactionItem = ({ tx }: Props) => {
+const TransactionItem = ({ tx, onClick }: Props) => {
 	// TypeScript knows `tx.category` will perfectly match a key in `categoryConfig`.
 	const { icon: Icon, color } = categoryConfig[tx.category];
 
@@ -14,7 +15,7 @@ const TransactionItem = ({ tx }: Props) => {
 	const isLent = tx.userStatus === 'you lent';
 
 	return (
-		<div className="flex items-center justify-between py-4 group hover:bg-slate-50/50 transition-colors cursor-pointer px-4 sm:px-6">
+		<div onClick={onClick} className={`flex items-center justify-between py-4 group transition-colors px-4 sm:px-6 ${onClick ? 'hover:bg-slate-50/50 cursor-pointer' : ''}`}>
 			<div className="flex items-center gap-4">
 
 				{/* 2. Apply the dynamic color and render the dynamic Icon */}

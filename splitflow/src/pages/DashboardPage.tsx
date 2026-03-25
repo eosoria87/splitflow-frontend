@@ -93,7 +93,7 @@ const DashboardPage = () => {
 				{/* --- HEADER --- */}
 				<Header
 					title='Dashboard'
-					subtitle={`Welcome back ${user.name ? user.name.split(' ')[0] : ''}, let's settle up!`}
+					subtitle={<>Welcome back <strong>{user.name ? user.name.split(' ')[0] : ''}</strong>, let's settle up!</>}
 					customAction={<></>}
 				/>
 

@@ -1,14 +1,38 @@
-import { MagnifyingGlassIcon, FunnelIcon } from "@heroicons/react/24/outline";
+import { useState } from "react";
+import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import TransactionItem from "./TransactionItem";
-import type { TransactionGroup } from "../../types/Transaction";
+import type { GroupTransaction, TransactionGroup } from "../../types/Transaction";
 import Card from "../ui/Card";
+import EditExpenseModal from "../ui/EditExpenseModal";
 
 interface Props {
 	groups: TransactionGroup[];
 }
 
+const getCurrentUserId = (): string => {
+	try { return JSON.parse(localStorage.getItem('sf_user') || '{}').id ?? ''; }
+	catch { return ''; }
+};
+
 const TransactionFeed = ({ groups }: Props) => {
+	const currentUserId = getCurrentUserId();
+	const [query, setQuery] = useState('');
+	const [editingTx, setEditingTx] = useState<GroupTransaction | null>(null);
+
+	const filteredGroups = query.trim() === ''
+		? groups
+		: groups
+			.map(g => ({
+				...g,
+				transactions: g.transactions.filter(tx =>
+					tx.title.toLowerCase().includes(query.toLowerCase()) ||
+					tx.paidBy.toLowerCase().includes(query.toLowerCase())
+				),
+			}))
+			.filter(g => g.transactions.length > 0);
+
 	return (
+		<>
 		<div className="flex flex-col h-full w-full">
 
 			{/* --- HEADER --- */}
@@ -24,22 +48,18 @@ const TransactionFeed = ({ groups }: Props) => {
 						<input
 							type="text"
 							placeholder="Search expenses"
+							value={query}
+							onChange={e => setQuery(e.target.value)}
 							className="pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none w-full sm:w-64 transition-all"
 						/>
 					</div>
-
-					{/* Filter Button */}
-					<button className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors">
-						<FunnelIcon className="w-4 h-4" />
-						<span className="hidden sm:inline">Filter</span>
-					</button>
 				</div>
 			</div>
 
 			{/* --- FEED LIST --- */}
 			<Card className="p-0 overflow-hidden">
 				<div className="flex flex-col divide-y divide-slate-100">
-					{groups.map((group, groupIdx) => (
+					{filteredGroups.map((group, groupIdx) => (
 						<div key={groupIdx} className="flex flex-col">
 
 							{/* Date Header Segment */}
@@ -55,7 +75,7 @@ const TransactionFeed = ({ groups }: Props) => {
 							{/* Transactions under this date */}
 							<div className="flex flex-col divide-y divide-slate-100">
 								{group.transactions.map((tx) => (
-									<TransactionItem key={tx.id} tx={tx} />
+									<TransactionItem key={tx.id} tx={tx} onClick={tx.paidById === currentUserId ? () => setEditingTx(tx) : undefined} />
 								))}
 							</div>
 
@@ -70,6 +90,11 @@ const TransactionFeed = ({ groups }: Props) => {
 				</button>
 			</div>
 		</div>
+
+		{editingTx && (
+			<EditExpenseModal expense={editingTx} onClose={() => setEditingTx(null)} />
+		)}
+		</>
 	);
 };
 

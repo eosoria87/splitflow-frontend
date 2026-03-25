@@ -3,6 +3,7 @@ import { useForm, type FieldValues } from 'react-hook-form';
 import { Link, useNavigate } from "react-router-dom";
 import { EyeIcon } from "@heroicons/react/24/outline";
 import Logo from "../components/ui/Logo";
+import GoogleIcon from "../components/ui/GoogleIcon";
 import Button from "../components/ui/Button";
 import FooterBar from "../components/layout/FooterBar";
 import { useAuth } from "../hooks/useAuth";
@@ -66,10 +67,10 @@ const LoginPage = () => {
 							className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors text-sm placeholder:text-slate-400"
 						/>
 						{errors.email?.type === 'required' && (
-							<p className="text-red-500 text-sm mt-1">The email field is required.</p>
+							<p className="text-red-500 text-sm text-left mt-1">The email field is required.</p>
 						)}
 						{errors.email?.type === 'pattern' && (
-							<p className="text-red-500 text-sm mt-1">Please enter a valid email address.</p>
+							<p className="text-red-500 text-sm text-left mt-1">Please enter a valid email address.</p>
 						)}
 					</div>
 					<div className="flex justify-between items-center mb-2">
@@ -80,21 +81,15 @@ const LoginPage = () => {
 							Forgot password?
 						</Link>
 					</div>
-					<div className="relative">
+					<div className="relative mb-1">
 						<input
 							{...register('password', {required: true, minLength: 8})}
 							id="password"
 							type={showPassword ? "text" : "password"}
 							autoComplete="current-password"
 							placeholder="••••••••"
-							className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors text-sm placeholder:text-slate-400 tracking-widest"
+							className="w-full px-4 pr-11 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors text-sm placeholder:text-slate-400 tracking-widest"
 						/>
-						{errors.password?.type === 'required' && (
-							<p className="text-red-500 text-sm mt-1">The password field is required.</p>
-						)}
-						{errors.password?.type === 'minLength' && (
-							<p className="text-red-500 text-sm mt-1">The password must be at least 8 characters long.</p>
-						)}
 						<button
 							type="button"
 							onClick={() => setShowPassword(!showPassword)}
@@ -102,7 +97,13 @@ const LoginPage = () => {
 						>
 							<EyeIcon className="size-5" />
 						</button>
-					</div> {/* password input/eye icon div ending*/}
+					</div>
+					{errors.password?.type === 'required' && (
+						<p className="text-red-500 text-sm text-left mt-1">The password field is required.</p>
+					)}
+					{errors.password?.type === 'minLength' && (
+						<p className="text-red-500 text-sm text-left mt-1">The password must be at least 8 characters long.</p>
+					)}
 					{apiError && (
 						<p className="text-red-500 text-sm">{apiError}</p>
 					)}
@@ -120,14 +121,7 @@ const LoginPage = () => {
 				</div>
 				<Button variant='outline' className="w-full mt-2" onClick={handleLoginGoogle}>
 					<span className="inline-flex items-center gap-2">
-						<svg viewBox="0 0 24 24" width="18" height="18" xmlns="http://www.w3.org/2000/svg">
-							<g transform="matrix(1, 0, 0, 1, 27.009001, -39.238998)">
-								<path fill="#4285F4" d="M -3.264 51.509 C -3.264 50.719 -3.334 49.969 -3.454 49.239 L -14.754 49.239 L -14.754 53.419 L -8.284 53.419 C -8.554 54.819 -9.414 55.979 -10.604 56.779 L -10.604 59.519 L -6.714 59.519 C -4.434 57.419 -3.264 54.749 -3.264 51.509 Z" />
-								<path fill="#34A853" d="M -14.754 63.239 C -11.514 63.239 -8.804 62.159 -6.714 59.519 L -10.604 56.779 C -11.734 57.539 -13.144 57.959 -14.754 57.959 C -17.864 57.959 -20.494 55.859 -21.434 53.039 L -25.464 53.039 L -25.464 55.829 C -23.494 59.739 -19.444 63.239 -14.754 63.239 Z" />
-								<path fill="#FBBC05" d="M -21.434 53.039 C -21.674 52.339 -21.804 51.599 -21.804 50.839 C -21.804 50.079 -21.674 49.339 -21.434 48.639 L -21.434 45.849 L -25.464 45.849 C -26.284 47.479 -26.754 49.299 -26.754 50.839 C -26.754 52.379 -26.284 54.199 -25.464 55.829 L -21.434 53.039 Z" />
-								<path fill="#EA4335" d="M -14.754 43.719 C -12.984 43.719 -11.404 44.329 -10.154 45.519 L -6.644 42.009 C -8.814 39.999 -11.524 38.839 -14.754 38.839 C -19.444 38.839 -23.494 42.339 -25.464 45.849 L -21.434 48.639 C -20.494 45.819 -17.864 43.719 -14.754 43.719 Z" />
-							</g>
-						</svg>
+						<GoogleIcon />
 						<span className="text-gray-500">Google</span>
 					</span>
 				</Button>
