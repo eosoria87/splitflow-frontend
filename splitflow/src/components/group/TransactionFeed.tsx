@@ -1,15 +1,23 @@
 import { useState } from "react";
-import { MagnifyingGlassIcon, FunnelIcon } from "@heroicons/react/24/outline";
+import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import TransactionItem from "./TransactionItem";
-import type { TransactionGroup } from "../../types/Transaction";
+import type { GroupTransaction, TransactionGroup } from "../../types/Transaction";
 import Card from "../ui/Card";
+import EditExpenseModal from "../ui/EditExpenseModal";
 
 interface Props {
 	groups: TransactionGroup[];
 }
 
+const getCurrentUserId = (): string => {
+	try { return JSON.parse(localStorage.getItem('sf_user') || '{}').id ?? ''; }
+	catch { return ''; }
+};
+
 const TransactionFeed = ({ groups }: Props) => {
+	const currentUserId = getCurrentUserId();
 	const [query, setQuery] = useState('');
+	const [editingTx, setEditingTx] = useState<GroupTransaction | null>(null);
 
 	const filteredGroups = query.trim() === ''
 		? groups
@@ -24,6 +32,7 @@ const TransactionFeed = ({ groups }: Props) => {
 			.filter(g => g.transactions.length > 0);
 
 	return (
+		<>
 		<div className="flex flex-col h-full w-full">
 
 			{/* --- HEADER --- */}
@@ -66,7 +75,7 @@ const TransactionFeed = ({ groups }: Props) => {
 							{/* Transactions under this date */}
 							<div className="flex flex-col divide-y divide-slate-100">
 								{group.transactions.map((tx) => (
-									<TransactionItem key={tx.id} tx={tx} />
+									<TransactionItem key={tx.id} tx={tx} onClick={tx.paidById === currentUserId ? () => setEditingTx(tx) : undefined} />
 								))}
 							</div>
 
@@ -81,6 +90,11 @@ const TransactionFeed = ({ groups }: Props) => {
 				</button>
 			</div>
 		</div>
+
+		{editingTx && (
+			<EditExpenseModal expense={editingTx} onClose={() => setEditingTx(null)} />
+		)}
+		</>
 	);
 };
 
