@@ -71,19 +71,30 @@ export const dashboardService = {
 	},
 
 	// Pure transform — no fetching
-	getUserGroups: (groups: RawGroup[], groupExpensesMap: Record<string, RawExpense[]> = {}): DashboardGroup[] => {
+	getUserGroups: (groups: RawGroup[], groupExpensesMap: Record<string, RawExpense[]> = {}, currentUserId = ''): DashboardGroup[] => {
 		return groups.map((g) => {
 			const expenses = groupExpensesMap[g.id] ?? [];
 			const latestDate = expenses.length > 0
 				? expenses.reduce((latest, exp) => exp.created_at > latest ? exp.created_at : latest, expenses[0].created_at)
 				: g.updated_at;
+
+			let paid = 0, owes = 0;
+			expenses.forEach(exp => {
+				if (exp.paid_by === currentUserId) paid += exp.amount;
+				const me = exp.participants.find(p => p.user_id === currentUserId);
+				if (me) owes += me.share;
+			});
+			const net = parseFloat((paid - owes).toFixed(2));
+			const status: DashboardGroup['status'] = net > 0 ? 'owed' : net < 0 ? 'owe' : 'settled';
+			const amount = net !== 0 ? `$${Math.abs(net).toFixed(2)}` : null;
+
 			return {
 				id: g.id,
 				name: g.name,
 				category: g.category || 'other',
 				updatedAt: formatRelativeTime(latestDate),
-				status: 'settled',
-				amount: '$0.00',
+				status,
+				amount,
 			};
 		});
 	},
@@ -191,7 +202,7 @@ async function fetchAndCache(userId: string): Promise<DashboardPageData> {
 	const groups = await dashboardService.getGroups();
 	const groupExpensesMap = await dashboardService.getGroupExpenses(groups);
 	const allExpenses = Object.values(groupExpensesMap).flat();
-	const userGroups = dashboardService.getUserGroups(groups, groupExpensesMap);
+	const userGroups = dashboardService.getUserGroups(groups, groupExpensesMap, userId);
 	const balances = dashboardService.getOverallBalances(userId, groupExpensesMap);
 	const recentActivity = dashboardService.getRecentActivity(userId, allExpenses);
 	sessionStorage.setItem(DASHBOARD_CACHE_KEY, JSON.stringify({ balances, userGroups, recentActivity }));
